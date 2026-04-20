@@ -1,5 +1,5 @@
 {
-  "name": "@intodns/mcp-server",
+  "name": "intodns-mcp",
   "version": "1.0.0",
   "description": "MCP server for IntoDNS.ai — DNS & email security scanning from any AI assistant",
   "main": "dist/index.js",

@@ -27,7 +27,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "intodns": {
       "command": "npx",
-      "args": ["-y", "@intodns/mcp-server"]
+      "args": ["-y", "intodns-mcp"]
     }
   }
 }
@@ -36,7 +36,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ### Option B — global install
 
 ```bash
-npm install -g @intodns/mcp-server
+npm install -g intodns-mcp
 ```
 
 Then in `claude_desktop_config.json`:
