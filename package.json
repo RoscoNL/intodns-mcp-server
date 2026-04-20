@@ -1,0 +1,43 @@
+{
+  "name": "@intodns/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for IntoDNS.ai — DNS & email security scanning from any AI assistant",
+  "main": "dist/index.js",
+  "bin": {
+    "intodns-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "dns",
+    "email-security",
+    "spf",
+    "dkim",
+    "dmarc",
+    "dnssec",
+    "claude",
+    "intodns"
+  ],
+  "author": "Cobytes B.V.",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cobytes-bv/intodns-mcp-server.git"
+  },
+  "homepage": "https://intodns.ai"
+}
