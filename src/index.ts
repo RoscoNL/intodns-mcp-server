@@ -17,7 +17,7 @@ async function apiFetch(path: string): Promise<unknown> {
 
 const server = new McpServer({
   name: "intodns",
-  version: "1.0.0",
+  version: "1.0.1",
 });
 
 server.tool(
