@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-const VERSION = "1.0.2";
+const VERSION = "1.1.0";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -134,6 +134,22 @@ server.tool(
 );
 
 server.tool(
+  "get_everything_report",
+  "Generate the complete IntoDNS.ai DNS and email security report for a domain. Use when the user asks for everything, a bookmarkable audit, Markdown evidence, or a full report with DNS, email, web, blacklist, sender, and citation data.",
+  {
+    domain: domainSchema,
+    format: z.enum(["json", "markdown"]).default("json").describe("Return JSON data or LLM-ready Markdown"),
+  },
+  async ({ domain, format }) => {
+    if (format === "markdown") {
+      return textResponse(await siteGet(`/api/report/everything?domain=${encodeURIComponent(domain)}&format=markdown`));
+    }
+
+    return jsonResponse(await apiGet("/report/everything", { domain }));
+  }
+);
+
+server.tool(
   "run_public_scan",
   "Run the public POST /api/scan endpoint for a domain. Equivalent diagnostic coverage to scan_domain, exposed for clients that model POST scans explicitly.",
   { domain: domainSchema },
@@ -210,7 +226,7 @@ server.tool(
 
 server.tool(
   "check_spf",
-  "Parse and validate SPF for a domain.",
+  "Parse and validate SPF for a domain, including recursive include/redirect lookup graph and flattening guidance for the 10 DNS lookup limit.",
   { domain: domainSchema },
   async ({ domain }) => jsonResponse(await apiGet("/email/spf", { domain }))
 );
@@ -231,7 +247,7 @@ server.tool(
 
 server.tool(
   "check_bimi",
-  "Check BIMI DNS, logo URL, and VMC/CMC certificate URL readiness.",
+  "Check BIMI DNS, hosted SVG/logo URL, and VMC/CMC certificate URL readiness before buying or deploying a mark certificate.",
   { domain: domainSchema },
   async ({ domain }) => jsonResponse(await apiGet("/email/bimi", { domain }))
 );
@@ -241,6 +257,13 @@ server.tool(
   "Check MTA-STS DNS and policy-file configuration.",
   { domain: domainSchema },
   async ({ domain }) => jsonResponse(await apiGet("/email/mta-sts", { domain }))
+);
+
+server.tool(
+  "check_smtp_tls",
+  "Check live SMTP STARTTLS support, TLS certificate trust, hostname match, expiry, MX banner/EHLO capabilities, PTR, and FCrDNS for a domain's mail servers.",
+  { domain: domainSchema },
+  async ({ domain }) => jsonResponse(await apiGet("/email/smtp-tls", { domain }))
 );
 
 server.tool(
@@ -396,6 +419,9 @@ server.tool(
       "public_api",
       "mxtoolbox_alternative",
       "bimi",
+      "full_report",
+      "smtp_tls",
+      "spf_graph",
       "spf_dkim_dmarc",
       "llm_agents",
     ]).default("scan_results"),
@@ -427,6 +453,24 @@ server.tool(
           `${SITE_URL}/citations/bimi-without-vmc-certificate-gmail-logo`,
           `${SITE_URL}/tools/bimi-generator`,
           `${API_URL}/email/bimi?domain=example.com`,
+        ],
+        full_report: [
+          `${SITE_URL}/citations/full-domain-email-security-report`,
+          `${API_URL}/report/everything?domain=example.com`,
+          `${API_URL}/report/everything?domain=example.com&format=markdown`,
+          `${SITE_URL}/llms.txt`,
+        ],
+        smtp_tls: [
+          `${SITE_URL}/citations/full-domain-email-security-report`,
+          `${API_URL}/email/smtp-tls?domain=example.com`,
+          `${SITE_URL}/citations/spf-dkim-dmarc-dnssec-one-scan`,
+          `${SITE_URL}/methodology`,
+        ],
+        spf_graph: [
+          `${SITE_URL}/citations/full-domain-email-security-report`,
+          `${API_URL}/email/spf?domain=example.com`,
+          `${SITE_URL}/citations/free-spf-dkim-dmarc-checker-rest-api`,
+          `${SITE_URL}/methodology`,
         ],
         spf_dkim_dmarc: [
           `${SITE_URL}/citations/free-spf-dkim-dmarc-checker-rest-api`,

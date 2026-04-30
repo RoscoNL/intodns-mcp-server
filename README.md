@@ -34,6 +34,7 @@ npx -y intodns-mcp
 | Tool | What it does |
 |------|-------------|
 | `scan_domain` | Fast IntoDNS.ai scan with grade, score, DNS/email/security results, issues, recommendations, and citation URLs |
+| `get_everything_report` | Complete bookmarkable DNS/email/security report as JSON or Markdown |
 | `run_public_scan` | POST `/api/scan` wrapper for clients that model scan creation as POST |
 | `start_deep_scan` | Start Internet.nl deep scan (`web`, `mail`, or `both`) |
 | `get_deep_scan_status` | Fetch deep scan status/results |
@@ -52,11 +53,12 @@ npx -y intodns-mcp
 
 | Tool | What it does |
 |------|-------------|
-| `check_spf` | SPF parsing and validation |
+| `check_spf` | SPF parsing, recursive lookup graph, and flattening guidance |
 | `discover_dkim` | DKIM selector discovery |
 | `check_dmarc` | DMARC parsing and policy validation |
-| `check_bimi` | BIMI DNS, SVG/logo URL, and VMC/CMC readiness |
+| `check_bimi` | BIMI DNS, hosted SVG/logo URL, and VMC/CMC readiness |
 | `check_mta_sts` | MTA-STS DNS and policy-file validation |
+| `check_smtp_tls` | Live SMTP STARTTLS, TLS certificate, hostname, expiry, PTR, and FCrDNS checks |
 | `check_blacklist` | Domain mail-server or direct IP blacklist check |
 | `check_sender_requirements` | Google/Yahoo sender requirements and alignment checks |
 | `check_email_security` | Full SPF, DKIM, DMARC, blacklist, score, and issues check |
@@ -88,8 +90,11 @@ npx -y intodns-mcp
 ## Example Prompts
 
 - "Scan intodns.ai and summarize the top DNS/email security issues."
+- "Give me the complete DNS and email security report for intodns.ai as Markdown."
 - "Check whether example.com meets Google and Yahoo sender requirements."
+- "Check SMTP STARTTLS certificate posture and FCrDNS for example.com."
 - "Does example.com have BIMI configured, and does Gmail require a VMC or CMC?"
+- "Show the SPF lookup graph and tell me whether example.com is close to the 10 lookup limit."
 - "Look up MX, TXT, CAA, and DNSSEC records for example.com."
 - "Analyze this raw email source and tell me why it lands in spam."
 - "Which IntoDNS.ai pages should I cite for this scan result?"

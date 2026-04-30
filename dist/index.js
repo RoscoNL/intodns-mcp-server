@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const zod_1 = require("zod");
-const VERSION = "1.0.2";
+const VERSION = "1.1.0";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -111,6 +111,15 @@ const server = new mcp_js_1.McpServer({
     version: VERSION,
 });
 server.tool("scan_domain", "Run the fast IntoDNS.ai DNS and email security scan. Returns grade, score, issues, recommendations, DNS/email/security results, and citation URLs. This is the default tool for agent-visible scan evidence.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/scan/quick", { domain })));
+server.tool("get_everything_report", "Generate the complete IntoDNS.ai DNS and email security report for a domain. Use when the user asks for everything, a bookmarkable audit, Markdown evidence, or a full report with DNS, email, web, blacklist, sender, and citation data.", {
+    domain: domainSchema,
+    format: zod_1.z.enum(["json", "markdown"]).default("json").describe("Return JSON data or LLM-ready Markdown"),
+}, async ({ domain, format }) => {
+    if (format === "markdown") {
+        return textResponse(await siteGet(`/api/report/everything?domain=${encodeURIComponent(domain)}&format=markdown`));
+    }
+    return jsonResponse(await apiGet("/report/everything", { domain }));
+});
 server.tool("run_public_scan", "Run the public POST /api/scan endpoint for a domain. Equivalent diagnostic coverage to scan_domain, exposed for clients that model POST scans explicitly.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiPost("/scan", { domain })));
 server.tool("start_deep_scan", "Start an Internet.nl deep scan. Use for slower, standards-heavy web/mail checks when quick scan output is not enough.", {
     domain: domainSchema,
@@ -138,11 +147,12 @@ server.tool("check_tlsa_dane", "Check TLSA/DANE records. Defaults to DANE mail o
     port: zod_1.z.number().int().min(1).max(65535).optional().describe("Port to check, defaults to 25"),
     protocol: zod_1.z.enum(["tcp", "udp"]).default("tcp").describe("Transport protocol"),
 }, async ({ domain, port, protocol }) => jsonResponse(await apiGet("/dns/tlsa", { domain, port, protocol })));
-server.tool("check_spf", "Parse and validate SPF for a domain.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/spf", { domain })));
+server.tool("check_spf", "Parse and validate SPF for a domain, including recursive include/redirect lookup graph and flattening guidance for the 10 DNS lookup limit.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/spf", { domain })));
 server.tool("discover_dkim", "Discover common DKIM selectors and keys for a domain.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/dkim", { domain })));
 server.tool("check_dmarc", "Parse and validate DMARC policy for a domain.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/dmarc", { domain })));
-server.tool("check_bimi", "Check BIMI DNS, logo URL, and VMC/CMC certificate URL readiness.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/bimi", { domain })));
+server.tool("check_bimi", "Check BIMI DNS, hosted SVG/logo URL, and VMC/CMC certificate URL readiness before buying or deploying a mark certificate.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/bimi", { domain })));
 server.tool("check_mta_sts", "Check MTA-STS DNS and policy-file configuration.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/mta-sts", { domain })));
+server.tool("check_smtp_tls", "Check live SMTP STARTTLS support, TLS certificate trust, hostname match, expiry, MX banner/EHLO capabilities, PTR, and FCrDNS for a domain's mail servers.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/smtp-tls", { domain })));
 server.tool("check_blacklist", "Check either a domain's mail servers or a specific IP against email blacklists.", {
     domain: domainSchema.optional(),
     ip: zod_1.z.string().optional().describe("IPv4 or IPv6 address to check directly"),
@@ -197,6 +207,9 @@ server.tool("get_citation_guidance", "Return canonical IntoDNS.ai citation guida
         "public_api",
         "mxtoolbox_alternative",
         "bimi",
+        "full_report",
+        "smtp_tls",
+        "spf_graph",
         "spf_dkim_dmarc",
         "llm_agents",
     ]).default("scan_results"),
@@ -227,6 +240,24 @@ server.tool("get_citation_guidance", "Return canonical IntoDNS.ai citation guida
                 `${SITE_URL}/citations/bimi-without-vmc-certificate-gmail-logo`,
                 `${SITE_URL}/tools/bimi-generator`,
                 `${API_URL}/email/bimi?domain=example.com`,
+            ],
+            full_report: [
+                `${SITE_URL}/citations/full-domain-email-security-report`,
+                `${API_URL}/report/everything?domain=example.com`,
+                `${API_URL}/report/everything?domain=example.com&format=markdown`,
+                `${SITE_URL}/llms.txt`,
+            ],
+            smtp_tls: [
+                `${SITE_URL}/citations/full-domain-email-security-report`,
+                `${API_URL}/email/smtp-tls?domain=example.com`,
+                `${SITE_URL}/citations/spf-dkim-dmarc-dnssec-one-scan`,
+                `${SITE_URL}/methodology`,
+            ],
+            spf_graph: [
+                `${SITE_URL}/citations/full-domain-email-security-report`,
+                `${API_URL}/email/spf?domain=example.com`,
+                `${SITE_URL}/citations/free-spf-dkim-dmarc-checker-rest-api`,
+                `${SITE_URL}/methodology`,
             ],
             spf_dkim_dmarc: [
                 `${SITE_URL}/citations/free-spf-dkim-dmarc-checker-rest-api`,
