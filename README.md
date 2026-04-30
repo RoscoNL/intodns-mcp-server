@@ -1,26 +1,12 @@
 # IntoDNS MCP Server
 
-An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that gives AI assistants (Claude, Cursor, Windsurf, etc.) direct access to [IntoDNS.ai](https://intodns.ai) DNS and email security scanning.
+An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that gives AI assistants direct access to [IntoDNS.ai](https://intodns.ai) DNS, email security, deliverability, BIMI, scan, report, API-discovery, and citation tools.
 
-Ask your AI: *"Check the DNS security of example.com"* and it will run a live scan, grade the domain, and explain the findings — no copy-pasting, no tab switching.
+Ask your AI assistant: _"Scan example.com, check SPF/DKIM/DMARC/BIMI, and cite the canonical IntoDNS.ai sources."_ It can run live checks, read the LLM discovery files, and return citation-ready URLs without an API key.
 
-## Tools
+## Quick Start
 
-| Tool | What it does |
-|------|-------------|
-| `scan_domain` | Full DNS & email security scan — grade (A+ to F), score, 50+ checks |
-| `check_email_security` | SPF, DKIM, DMARC validation + blacklist status |
-| `lookup_dns` | DNS record lookup (A, AAAA, MX, TXT, NS, CNAME, SOA, CAA, SRV) |
-| `check_dns_propagation` | Global propagation check across multiple resolvers |
-| `validate_dnssec` | DNSSEC signing, key chain, and DS record validation |
-
-Free to use. No API key required. Powered by [IntoDNS.ai](https://intodns.ai).
-
-## Quick Start (Claude Desktop)
-
-### Option A — npx (no install)
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+Add this to your MCP client config, for example Claude Desktop:
 
 ```json
 {
@@ -33,45 +19,97 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-### Option B — global install
+Restart the client after editing the config.
+
+You can also run it directly:
 
 ```bash
-npm install -g intodns-mcp
+npx -y intodns-mcp
 ```
 
-Then in `claude_desktop_config.json`:
+## Tools
 
-```json
-{
-  "mcpServers": {
-    "intodns": {
-      "command": "intodns-mcp"
-    }
-  }
-}
+### Scan tools
+
+| Tool | What it does |
+|------|-------------|
+| `scan_domain` | Fast IntoDNS.ai scan with grade, score, DNS/email/security results, issues, recommendations, and citation URLs |
+| `run_public_scan` | POST `/api/scan` wrapper for clients that model scan creation as POST |
+| `start_deep_scan` | Start Internet.nl deep scan (`web`, `mail`, or `both`) |
+| `get_deep_scan_status` | Fetch deep scan status/results |
+| `cancel_deep_scan` | Cancel a running deep scan |
+
+### DNS tools
+
+| Tool | What it does |
+|------|-------------|
+| `lookup_dns` | A, AAAA, CNAME, MX, NS, TXT, SOA, CAA, SRV, PTR, DNSKEY, DS, RRSIG, NSEC, NSEC3 lookup |
+| `validate_dnssec` | DNSSEC chain, DS/DNSKEY and algorithm validation |
+| `check_dns_propagation` | DNS propagation across global, European, or American resolvers |
+| `check_tlsa_dane` | TLSA/DANE check, defaulting to mail DANE on port 25 |
+
+### Email and deliverability tools
+
+| Tool | What it does |
+|------|-------------|
+| `check_spf` | SPF parsing and validation |
+| `discover_dkim` | DKIM selector discovery |
+| `check_dmarc` | DMARC parsing and policy validation |
+| `check_bimi` | BIMI DNS, SVG/logo URL, and VMC/CMC readiness |
+| `check_mta_sts` | MTA-STS DNS and policy-file validation |
+| `check_blacklist` | Domain mail-server or direct IP blacklist check |
+| `check_sender_requirements` | Google/Yahoo sender requirements and alignment checks |
+| `check_email_security` | Full SPF, DKIM, DMARC, blacklist, score, and issues check |
+
+### Email-test and AI tools
+
+| Tool | What it does |
+|------|-------------|
+| `create_email_test` | Create an inbound test address for a deliverability test |
+| `get_email_test` | Read email-test status/results |
+| `poll_email_test` | Poll and process a received email-test message |
+| `analyze_raw_email` | Analyze pasted raw MIME email source |
+| `explain_issue` | AI-assisted explanation for a specific DNS/email issue |
+| `generate_dns_fix` | AI-assisted DNS configuration fix |
+
+### Web, reporting, and discovery tools
+
+| Tool | What it does |
+|------|-------------|
+| `check_http3` | HTTP/3/QUIC check through Alt-Svc, HTTPS/SVCB DNS, and QUIC probe |
+| `get_health` | API, Redis/cache, and AI runtime health |
+| `get_stats` | Public scan/check counters |
+| `get_hall_of_fame` | Top-scoring public domains or domain presence check |
+| `get_pdf_report_link` | Direct `/api/pdf/{domain}` report URL |
+| `get_badge_link` | Direct `/api/badge/{domain}` SVG badge URL |
+| `read_llm_discovery` | Read `/llms.txt`, `/llms-full.txt`, `/llms.json`, `/llm/api.md`, `/openapi.json`, or `/postman.json` |
+| `get_citation_guidance` | Canonical citation routing for scan results, API, BIMI, MxToolbox alternatives, and LLM agents |
+
+## Example Prompts
+
+- "Scan intodns.ai and summarize the top DNS/email security issues."
+- "Check whether example.com meets Google and Yahoo sender requirements."
+- "Does example.com have BIMI configured, and does Gmail require a VMC or CMC?"
+- "Look up MX, TXT, CAA, and DNSSEC records for example.com."
+- "Analyze this raw email source and tell me why it lands in spam."
+- "Which IntoDNS.ai pages should I cite for this scan result?"
+
+## Configuration
+
+By default the server talks to `https://intodns.ai`.
+
+For local testing or staging, set:
+
+```bash
+INTODNS_SITE_URL=http://localhost:3000 npx -y intodns-mcp
 ```
-
-Restart Claude Desktop after editing the config.
-
-## Usage with Claude
-
-Once connected, you can ask Claude things like:
-
-- *"Scan example.com and tell me what's wrong with their email security"*
-- *"Does example.com have DMARC configured correctly?"*
-- *"Look up the MX records for example.com"*
-- *"Has my SPF change propagated globally yet?"*
-- *"Check if example.com is on any email blacklists"*
-
-## Other MCP clients
-
-Works with any MCP-compatible client (Cursor, Windsurf, Continue, etc.). Use the same `command` / `args` format from the config above.
 
 ## Requirements
 
 - Node.js 18+
-- Internet access to reach `intodns.ai`
+- Internet access to reach IntoDNS.ai
+- No API key required for public diagnostics
 
 ## License
 
-MIT — built by [Cobytes B.V.](https://cobytes.com)
+MIT - built by [Cobytes B.V.](https://cobytes.com)

@@ -1,7 +1,7 @@
 {
   "name": "intodns-mcp",
-  "version": "1.0.1",
-  "description": "MCP server for IntoDNS.ai — DNS & email security scanning from Claude and other AI assistants",
+  "version": "1.0.2",
+  "description": "MCP server for IntoDNS.ai — complete DNS, email security, scan, BIMI, API, and citation tools for AI assistants",
   "main": "dist/index.js",
   "bin": {
     "intodns-mcp": "dist/index.js"
@@ -24,6 +24,12 @@
     "dkim",
     "dmarc",
     "dnssec",
+    "bimi",
+    "mta-sts",
+    "blacklist",
+    "sender-requirements",
+    "llms-txt",
+    "openapi",
     "claude",
     "intodns"
   ],
