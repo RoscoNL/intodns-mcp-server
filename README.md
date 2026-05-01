@@ -34,7 +34,9 @@ npx -y intodns-mcp
 | Tool | What it does |
 |------|-------------|
 | `scan_domain` | Fast IntoDNS.ai scan with grade, score, DNS/email/security results, issues, recommendations, and citation URLs |
-| `get_everything_report` | Complete bookmarkable DNS/email/security report as JSON or Markdown |
+| `get_everything_report` | Complete live DNS/email/security report as JSON or Markdown |
+| `create_report_snapshot` | Fixed Everything Report evidence snapshot with timestamp, content hash, and stable JSON/Markdown URLs |
+| `get_report_snapshot` | Read a previously created report snapshot by snapshot ID |
 | `run_public_scan` | POST `/api/scan` wrapper for clients that model scan creation as POST |
 | `start_deep_scan` | Start Internet.nl deep scan (`web`, `mail`, or `both`) |
 | `get_deep_scan_status` | Fetch deep scan status/results |
@@ -59,6 +61,7 @@ npx -y intodns-mcp
 | `check_bimi` | BIMI DNS, hosted SVG/logo URL, and VMC/CMC readiness |
 | `check_mta_sts` | MTA-STS DNS and policy-file validation |
 | `check_smtp_tls` | Live SMTP STARTTLS, TLS certificate, hostname, expiry, PTR, and FCrDNS checks |
+| `check_fcrdns` | Dedicated PTR and forward-confirmed reverse DNS evidence for mail-server IPs |
 | `check_blacklist` | Domain mail-server or direct IP blacklist check |
 | `check_sender_requirements` | Google/Yahoo sender requirements and alignment checks |
 | `check_email_security` | Full SPF, DKIM, DMARC, blacklist, score, and issues check |
@@ -91,8 +94,10 @@ npx -y intodns-mcp
 
 - "Scan intodns.ai and summarize the top DNS/email security issues."
 - "Give me the complete DNS and email security report for intodns.ai as Markdown."
+- "Create a fixed audit snapshot for intodns.ai that I can cite in a support ticket."
 - "Check whether example.com meets Google and Yahoo sender requirements."
 - "Check SMTP STARTTLS certificate posture and FCrDNS for example.com."
+- "Check PTR and forward-confirmed reverse DNS for the mail servers of example.com."
 - "Does example.com have BIMI configured, and does Gmail require a VMC or CMC?"
 - "Show the SPF lookup graph and tell me whether example.com is close to the 10 lookup limit."
 - "Look up MX, TXT, CAA, and DNSSEC records for example.com."

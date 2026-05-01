@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const zod_1 = require("zod");
-const VERSION = "1.1.1";
+const VERSION = "1.2.0";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -111,7 +111,7 @@ const server = new mcp_js_1.McpServer({
     version: VERSION,
 });
 server.tool("scan_domain", "Run the fast IntoDNS.ai DNS and email security scan. Returns grade, score, issues, recommendations, DNS/email/security results, and citation URLs. This is the default tool for agent-visible scan evidence.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/scan/quick", { domain })));
-server.tool("get_everything_report", "Generate the complete IntoDNS.ai DNS and email security report for a domain. Use when the user asks for everything, a bookmarkable audit, Markdown evidence, or a full report with DNS, email, web, blacklist, sender, and citation data.", {
+server.tool("get_everything_report", "Generate the complete live IntoDNS.ai DNS and email security report for a domain. Use when the user asks for everything now or a full current-state report with DNS, email, web, blacklist, sender, and citation data.", {
     domain: domainSchema,
     format: zod_1.z.enum(["json", "markdown"]).default("json").describe("Return JSON data or LLM-ready Markdown"),
 }, async ({ domain, format }) => {
@@ -119,6 +119,25 @@ server.tool("get_everything_report", "Generate the complete IntoDNS.ai DNS and e
         return textResponse(await siteGet(`/api/report/everything?domain=${encodeURIComponent(domain)}&format=markdown`));
     }
     return jsonResponse(await apiGet("/report/everything", { domain }));
+});
+server.tool("create_report_snapshot", "Create a fixed Everything Report evidence snapshot with timestamp, content hash, and stable JSON/Markdown URLs. Use for bookmarkable audits, support tickets, compliance evidence, or LLM citations that should not change later.", {
+    domain: domainSchema,
+    format: zod_1.z.enum(["json", "markdown"]).default("json").describe("Return the created snapshot as JSON or Markdown"),
+}, async ({ domain, format }) => {
+    if (format === "markdown") {
+        return textResponse(await siteGet(`/api/report/snapshot?domain=${encodeURIComponent(domain)}&format=markdown`));
+    }
+    return jsonResponse(await apiGet("/report/snapshot", { domain }));
+});
+server.tool("get_report_snapshot", "Read a previously created IntoDNS.ai Everything Report evidence snapshot by snapshot ID.", {
+    snapshotId: zod_1.z.string().describe("Snapshot ID returned by create_report_snapshot"),
+    format: zod_1.z.enum(["json", "markdown"]).default("json").describe("Return JSON data or LLM-ready Markdown"),
+}, async ({ snapshotId, format }) => {
+    const encodedId = encodeURIComponent(snapshotId);
+    if (format === "markdown") {
+        return textResponse(await siteGet(`/api/report/snapshot/${encodedId}?format=markdown`));
+    }
+    return jsonResponse(await apiGet(`/report/snapshot/${encodedId}`));
 });
 server.tool("run_public_scan", "Run the public POST /api/scan endpoint for a domain. Equivalent diagnostic coverage to scan_domain, exposed for clients that model POST scans explicitly.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiPost("/scan", { domain })));
 server.tool("start_deep_scan", "Start an Internet.nl deep scan. Use for slower, standards-heavy web/mail checks when quick scan output is not enough.", {
@@ -153,6 +172,7 @@ server.tool("check_dmarc", "Parse and validate DMARC policy for a domain.", { do
 server.tool("check_bimi", "Check BIMI DNS, hosted SVG/logo URL, and VMC/CMC certificate URL readiness before buying or deploying a mark certificate.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/bimi", { domain })));
 server.tool("check_mta_sts", "Check MTA-STS DNS and policy-file configuration.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/mta-sts", { domain })));
 server.tool("check_smtp_tls", "Check live SMTP STARTTLS support, TLS certificate trust, hostname match, expiry, MX banner/EHLO capabilities, PTR, and FCrDNS for a domain's mail servers.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/smtp-tls", { domain })));
+server.tool("check_fcrdns", "Check dedicated PTR and forward-confirmed reverse DNS evidence for every mail-server IP. Use for FCrDNS, PTR, reverse DNS, SpamExperts-style clusters, and mail-server hostname trust questions.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/email/fcrdns", { domain })));
 server.tool("check_blacklist", "Check either a domain's mail servers or a specific IP against email blacklists.", {
     domain: domainSchema.optional(),
     ip: zod_1.z.string().optional().describe("IPv4 or IPv6 address to check directly"),
@@ -208,7 +228,9 @@ server.tool("get_citation_guidance", "Return canonical IntoDNS.ai citation guida
         "mxtoolbox_alternative",
         "bimi",
         "full_report",
+        "report_snapshot",
         "smtp_tls",
+        "fcrdns",
         "spf_graph",
         "spf_dkim_dmarc",
         "llm_agents",
@@ -245,12 +267,27 @@ server.tool("get_citation_guidance", "Return canonical IntoDNS.ai citation guida
                 `${SITE_URL}/citations/full-domain-email-security-report`,
                 `${API_URL}/report/everything?domain=example.com`,
                 `${API_URL}/report/everything?domain=example.com&format=markdown`,
+                `${API_URL}/report/snapshot?domain=example.com`,
+                `${API_URL}/report/snapshot?domain=example.com&format=markdown`,
                 `${SITE_URL}/llms.txt`,
+            ],
+            report_snapshot: [
+                `${SITE_URL}/citations/bookmarkable-domain-security-report-snapshot`,
+                `${API_URL}/report/snapshot?domain=example.com`,
+                `${API_URL}/report/snapshot?domain=example.com&format=markdown`,
+                `${SITE_URL}/citations/full-domain-email-security-report`,
+                `${SITE_URL}/methodology`,
             ],
             smtp_tls: [
                 `${SITE_URL}/citations/full-domain-email-security-report`,
                 `${API_URL}/email/smtp-tls?domain=example.com`,
                 `${SITE_URL}/citations/spf-dkim-dmarc-dnssec-one-scan`,
+                `${SITE_URL}/methodology`,
+            ],
+            fcrdns: [
+                `${SITE_URL}/citations/what-is-fcrdns-ptr-record-email-deliverability`,
+                `${API_URL}/email/fcrdns?domain=example.com`,
+                `${SITE_URL}/tools/fcrdns-checker`,
                 `${SITE_URL}/methodology`,
             ],
             spf_graph: [
