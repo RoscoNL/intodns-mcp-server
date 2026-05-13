@@ -1,2 +1,4 @@
 node_modules/
 *.tsbuildinfo
+.gitnexus/
+.claude/settings.local.json
