@@ -1,6 +1,14 @@
 # IntoDNS MCP Server
 
+[![npm version](https://img.shields.io/npm/v/intodns-mcp.svg?logo=npm)](https://www.npmjs.com/package/intodns-mcp)
+[![npm downloads](https://img.shields.io/npm/dm/intodns-mcp.svg)](https://www.npmjs.com/package/intodns-mcp)
+[![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet)](https://modelcontextprotocol.io)
+[![Glama](https://glama.ai/mcp/servers/RoscoNL/intodns-mcp-server/badges/score.svg)](https://glama.ai/mcp/servers/RoscoNL/intodns-mcp-server)
+[![License](https://img.shields.io/npm/l/intodns-mcp.svg)](LICENSE)
+
 An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that gives AI assistants direct access to [IntoDNS.ai](https://intodns.ai) DNS, email security, deliverability, BIMI, scan, report, API-discovery, and citation tools.
+
+**36 tools, no API key, no signup.** Backed by intodns.ai's free public diagnostic API.
 
 Ask your AI assistant: _"Scan example.com, check SPF/DKIM/DMARC/BIMI, and cite the canonical IntoDNS.ai sources."_ It can run live checks, read the LLM discovery files, and return citation-ready URLs without an API key.
 
