@@ -42,6 +42,7 @@ npx -y intodns-mcp
 | Tool | What it does |
 |------|-------------|
 | `scan_domain` | Fast IntoDNS.ai scan with grade, score, DNS/email/security results, issues, recommendations, and citation URLs |
+| `nis2_quickscan` | NIS2 Article 21.2 readiness score (0-100) mapped per measure, with evidence, critical gaps, and fix suggestions |
 | `get_everything_report` | Complete live DNS/email/security report as JSON or Markdown |
 | `create_report_snapshot` | Fixed Everything Report evidence snapshot with timestamp, content hash, and stable JSON/Markdown URLs |
 | `get_report_snapshot` | Read a previously created report snapshot by snapshot ID |

@@ -134,6 +134,19 @@ server.tool(
 );
 
 server.tool(
+  "nis2_quickscan",
+  "Compute a NIS2 Article 21.2 readiness score for a domain by mapping the IntoDNS quickscan onto the ten NIS2 measures. Returns a 0-100 weighted total, per-measure status (Article 21.2 a-j), evidence rows, critical gaps, and concrete fix suggestions. The score reflects only the DNS and email layer of NIS2 — full NIS2 compliance also requires audit of web applications, supply chain, organisational processes, and training. Use when the user asks about NIS2 compliance, NIS2 readiness, NIS2 Article 21.2, cyber-hygiene compliance, or related EU-NIS regulation checks for a domain.",
+  {
+    domain: domainSchema,
+    lang: z
+      .enum(["en", "nl"])
+      .default("en")
+      .describe("Language for the standard caveat text shown alongside the score."),
+  },
+  async ({ domain, lang }) => jsonResponse(await apiGet("/scan/nis2", { domain, lang }))
+);
+
+server.tool(
   "get_everything_report",
   "Generate the complete live IntoDNS.ai DNS and email security report for a domain. Use when the user asks for everything now or a full current-state report with DNS, email, web, blacklist, sender, and citation data.",
   {

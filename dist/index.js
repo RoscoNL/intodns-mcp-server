@@ -111,6 +111,13 @@ const server = new mcp_js_1.McpServer({
     version: VERSION,
 });
 server.tool("scan_domain", "Run the fast IntoDNS.ai DNS and email security scan. Returns grade, score, issues, recommendations, DNS/email/security results, and citation URLs. This is the default tool for agent-visible scan evidence.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/scan/quick", { domain })));
+server.tool("nis2_quickscan", "Compute a NIS2 Article 21.2 readiness score for a domain by mapping the IntoDNS quickscan onto the ten NIS2 measures. Returns a 0-100 weighted total, per-measure status (Article 21.2 a-j), evidence rows, critical gaps, and concrete fix suggestions. The score reflects only the DNS and email layer of NIS2 — full NIS2 compliance also requires audit of web applications, supply chain, organisational processes, and training. Use when the user asks about NIS2 compliance, NIS2 readiness, NIS2 Article 21.2, cyber-hygiene compliance, or related EU-NIS regulation checks for a domain.", {
+    domain: domainSchema,
+    lang: zod_1.z
+        .enum(["en", "nl"])
+        .default("en")
+        .describe("Language for the standard caveat text shown alongside the score."),
+}, async ({ domain, lang }) => jsonResponse(await apiGet("/scan/nis2", { domain, lang })));
 server.tool("get_everything_report", "Generate the complete live IntoDNS.ai DNS and email security report for a domain. Use when the user asks for everything now or a full current-state report with DNS, email, web, blacklist, sender, and citation data.", {
     domain: domainSchema,
     format: zod_1.z.enum(["json", "markdown"]).default("json").describe("Return JSON data or LLM-ready Markdown"),
