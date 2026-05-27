@@ -1,9 +1,12 @@
 name: Publish to npm
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (must already exist on main)'
+        required: true
+        type: string
 
 jobs:
   publish:
@@ -13,6 +16,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ inputs.tag }}
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: '24'
