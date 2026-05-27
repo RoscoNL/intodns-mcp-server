@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-const VERSION = "1.3.2";
+const VERSION = "1.4.0";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -193,13 +193,6 @@ server.tool(
 
     return jsonResponse(await apiGet(`/report/snapshot/${encodedId}`));
   }
-);
-
-server.tool(
-  "run_public_scan",
-  "Run the public POST /api/scan endpoint for a domain. Equivalent diagnostic coverage to scan_domain (same letter grade, score, issues, recommendations) but exposed via HTTP POST instead of the implicit GET used by scan_domain. Read-only — body parameters are not stored. Use only when an integration explicitly models scans as POST operations (idempotency contracts, audit logging conventions); prefer scan_domain in agent workflows for clarity. No auth, same latency as scan_domain.",
-  { domain: domainSchema },
-  async ({ domain }) => jsonResponse(await apiPost("/scan", { domain }))
 );
 
 server.tool(

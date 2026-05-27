@@ -26,7 +26,7 @@ jobs:
             | timeout 10 node dist/index.js 2>&1 || true)
           count=$(echo "$out" | grep -oE '"name":"[a-z_0-9]+"' | sort -u | wc -l)
           echo "tools registered: $count"
-          if [ "$count" -lt 37 ]; then
-            echo "::error::expected at least 37 tools, got $count"
+          if [ "$count" -lt 36 ]; then
+            echo "::error::expected at least 36 tools, got $count"
             exit 1
           fi
