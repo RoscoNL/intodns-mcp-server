@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-const VERSION = "1.2.0";
+const VERSION = "1.3.1";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -215,7 +215,7 @@ server.tool(
 
 server.tool(
   "get_deep_scan_status",
-  "Fetch status and results for an Internet.nl deep scan started by start_deep_scan.",
+  "Read-only status poll for a long-running Internet.nl deep scan. Returns scan progress (pending/running/finished), category scores, per-test results, and any failures. Requires a scanId returned by start_deep_scan; poll every 10-30s until status='finished'. Use after start_deep_scan; for fast single-vantage scans, prefer scan_domain. No auth, no side effects.",
   { scanId: z.string().describe("Deep scan ID returned by start_deep_scan") },
   async ({ scanId }) => jsonResponse(await apiGet(`/scan/${encodeURIComponent(scanId)}`))
 );
@@ -229,7 +229,7 @@ server.tool(
 
 server.tool(
   "lookup_dns",
-  "Look up DNS records through IntoDNS.ai DNS-over-HTTPS. Supports a single type or a list of types.",
+  "Read-only DNS record lookup via DNS-over-HTTPS. Pass `type` for a single record type or `types` for an array; if both omitted, returns A records. Returns parsed answers with TTL, raw rdata, and DNSSEC AD bit. Use for arbitrary record queries; use validate_dnssec for full DNSSEC chain validation, or check_dns_propagation for multi-resolver consensus. No auth, no rate limits beyond upstream resolver.",
   {
     domain: domainSchema,
     type: dnsTypeSchema.optional().describe("Single DNS record type"),
@@ -243,14 +243,14 @@ server.tool(
 
 server.tool(
   "validate_dnssec",
-  "Validate DNSSEC for a domain, including chain data, algorithms, DS/DNSKEY status, and issues.",
+  "Read-only DNSSEC chain validation. Walks the DS/DNSKEY chain from root, checks signatures, algorithm strength, key rollover state, and reports any broken links or unsigned zones. Returns chain steps, algorithm grades, and a boolean `valid`. Use when a domain claims DNSSEC; use lookup_dns(type='DNSKEY') for raw key data only. Single HTTP GET, no auth, no destructive actions.",
   { domain: domainSchema },
   async ({ domain }) => jsonResponse(await apiGet("/dns/dnssec", { domain }))
 );
 
 server.tool(
   "check_dns_propagation",
-  "Check DNS propagation across resolvers and regions.",
+  "Compare DNS responses across ~15-30 public resolvers worldwide to detect propagation lag or stale negative caches. Defaults to record type A, region 'all'. Returns per-resolver answers with mismatch grouping and a consensus value. Use when records were just changed and you suspect staleness; for single-resolver lookups use lookup_dns instead. Read-only HTTP, no auth, typical latency 5-15s.",
   {
     domain: domainSchema,
     type: propagationTypeSchema.default("A").describe("DNS record type to check"),
@@ -286,7 +286,7 @@ server.tool(
 
 server.tool(
   "check_dmarc",
-  "Parse and validate DMARC policy for a domain.",
+  "Read-only fetch and parse of the _dmarc TXT record. Returns parsed tag map (p, sp, rua, ruf, adkim, aspf, pct, fo), policy strength assessment, alignment mode, and warnings (missing rua, p=none, weak alignment, multiple records). Use for DMARC policy review; use check_sender_requirements for combined Google/Yahoo SPF+DKIM+DMARC pass/fail verdict. Single GET, no auth, no side effects.",
   { domain: domainSchema },
   async ({ domain }) => jsonResponse(await apiGet("/email/dmarc", { domain }))
 );
@@ -300,7 +300,7 @@ server.tool(
 
 server.tool(
   "check_mta_sts",
-  "Check MTA-STS DNS and policy-file configuration.",
+  "Read-only check of MTA-STS: TXT record at _mta-sts.<domain> plus the HTTPS policy file at mta-sts.<domain>/.well-known/mta-sts.txt. Returns parsed policy (mode: enforce/testing/none, mx allowlist, max_age), TLS certificate validity for the policy host, and consistency warnings between DNS and HTTPS. Use to verify enforced TLS for inbound mail; pair with check_smtp_tls for live STARTTLS validation. No auth, DNS + HTTPS GET only.",
   { domain: domainSchema },
   async ({ domain }) => jsonResponse(await apiGet("/email/mta-sts", { domain }))
 );
@@ -321,7 +321,7 @@ server.tool(
 
 server.tool(
   "check_blacklist",
-  "Check either a domain's mail servers or a specific IP against email blacklists.",
+  "Read-only query against ~80 public DNSBL/RBL/URIBL feeds. Provide either `domain` (resolves to MX IPs, all checked) or `ip` (checked directly) — at least one is required, throws otherwise. Returns per-feed listed/clean status, response codes, and aggregate count of blocking feeds. Use for inbound mail reputation pre-checks before sending bulk mail or onboarding a new SMTP server; not a removal-request service. No auth, typical latency 3-10s.",
   {
     domain: domainSchema.optional(),
     ip: z.string().optional().describe("IPv4 or IPv6 address to check directly"),
@@ -357,14 +357,14 @@ server.tool(
 
 server.tool(
   "get_email_test",
-  "Read the current status/results for an email test session.",
+  "Read-only status read for an email-test session. Returns 'pending' until a test email arrives at the unique address returned by create_email_test, then full SPF/DKIM/DMARC/headers/spam-score result once processed. Requires `testId` from create_email_test. Use after sending a test message to that address; for explicit processing of just-arrived mail use poll_email_test instead. Idempotent GET, no auth.",
   { testId: z.string().describe("Email test ID returned by create_email_test") },
   async ({ testId }) => jsonResponse(await apiGet(`/email-test/${encodeURIComponent(testId)}`))
 );
 
 server.tool(
   "poll_email_test",
-  "Poll an email test session and process a received test message when available.",
+  "Process the latest received message in an email-test session. Idempotent POST: if no message has arrived yet, returns 'pending'; if a message arrived since the last call, parses it and returns full authentication + content analysis. Requires `testId` from create_email_test. Use to actively trigger parsing after the user reports sending the test mail; use get_email_test for passive status polling without processing. No auth, no destructive side effects.",
   { testId: z.string().describe("Email test ID returned by create_email_test") },
   async ({ testId }) => jsonResponse(await apiPost(`/email-test/${encodeURIComponent(testId)}`))
 );
@@ -385,7 +385,7 @@ server.tool(
 
 server.tool(
   "explain_issue",
-  "Ask IntoDNS.ai for an AI-assisted explanation of a specific DNS/email issue type.",
+  "Ask the IntoDNS.ai AI service for a plain-language explanation of one specific issue (e.g. `spf_missing`, `no_dnssec`). Returns severity, business impact, root cause, and recommended fix steps as structured text. Read-only POST to /ai/explain — never mutates DNS or domain state. Provide `domain` and `issue` (enum); pass `context` from prior scan output (e.g. scan_domain result) for higher-quality answers. Use after scan_domain when an agent needs to walk a user through *why* a finding matters; use generate_dns_fix for the actual DNS record snippet that resolves it.",
   {
     domain: domainSchema,
     issue: issueSchema,
@@ -396,7 +396,7 @@ server.tool(
 
 server.tool(
   "generate_dns_fix",
-  "Generate an AI-assisted DNS configuration fix for a specific issue type.",
+  "Generate copy-pasteable DNS record snippets that fix one specific issue (e.g. `spf_missing` → suggested SPF record). Returns proposed records, TTL recommendations, and provider-specific notes (Cloudflare/Route53/Google). Read-only POST to /ai/fix — the API only suggests; it never modifies the user's zone. Provide `domain` and `issue` (enum); pass `context` from prior scan output for tailored output. Use after explain_issue or scan_domain identifies a problem; use lookup_dns afterwards to verify the user has applied the suggested record.",
   {
     domain: domainSchema,
     issue: issueSchema,
@@ -442,7 +442,7 @@ server.tool(
 
 server.tool(
   "get_badge_link",
-  "Return the direct SVG badge endpoint URL for a domain security score.",
+  "Build the direct SVG badge URL for a domain's security score. Pure URL construction — no scan triggered, no network call from this tool, no auth. Returns a JSON object with `badgeUrl` ready to embed in README.md, GitHub, status pages, or wikis. Style options: flat (default), flat-square, plastic, large. Use for embeddable status badges; use get_pdf_report_link for a downloadable full report URL instead.",
   {
     domain: domainSchema,
     style: z.enum(["flat", "flat-square", "plastic", "large"]).default("flat"),
