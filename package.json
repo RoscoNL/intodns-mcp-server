@@ -1,6 +1,6 @@
 {
   "name": "intodns-mcp",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "MCP server for IntoDNS.ai \u2014 complete DNS, email security, scan, BIMI, API, and citation tools for AI assistants",
   "main": "dist/index.js",
   "bin": {
@@ -13,6 +13,8 @@
   "scripts": {
     "build": "tsc && chmod +x dist/index.js",
     "start": "node dist/index.js",
+    "lint:tools": "node scripts/lint-tool-descriptions.mjs",
+    "prepublishOnly": "npm run lint:tools && npm run build",
     "prepare": "npm run build"
   },
   "keywords": [
