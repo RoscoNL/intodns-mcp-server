@@ -8,12 +8,14 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc && chmod +x dist/index.js",
     "start": "node dist/index.js",
     "lint:tools": "node scripts/lint-tool-descriptions.mjs",
+    "test": "node scripts/lint-tool-descriptions.mjs",
     "prepublishOnly": "npm run lint:tools && npm run build",
     "prepare": "npm run build"
   },

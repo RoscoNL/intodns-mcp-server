@@ -35,6 +35,10 @@ You can also run it directly:
 npx -y intodns-mcp
 ```
 
+## Supported clients
+
+Works with any MCP-compatible client, including Claude Desktop, Claude Code, Cursor, Windsurf, Zed, Continue, ChatGPT, and OpenClaw.
+
 ## Tools
 
 ### Scan tools
@@ -46,7 +50,6 @@ npx -y intodns-mcp
 | `get_everything_report` | Complete live DNS/email/security report as JSON or Markdown |
 | `create_report_snapshot` | Fixed Everything Report evidence snapshot with timestamp, content hash, and stable JSON/Markdown URLs |
 | `get_report_snapshot` | Read a previously created report snapshot by snapshot ID |
-| `run_public_scan` | POST `/api/scan` wrapper for clients that model scan creation as POST |
 | `start_deep_scan` | Start Internet.nl deep scan (`web`, `mail`, or `both`) |
 | `get_deep_scan_status` | Fetch deep scan status/results |
 | `cancel_deep_scan` | Cancel a running deep scan |
