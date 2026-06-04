@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -271,6 +271,13 @@ server.tool(
 );
 
 server.tool(
+  "flatten_spf",
+  "Read-only SPF flattening for a domain. Resolves the full include/a/mx/redirect graph to literal ip4/ip6 addresses and returns a single flattened SPF record that fits under the RFC-7208 10-lookup limit, plus lookup counts before/after, IP count, record length, whether it must be split across multiple records, and a maintenance warning. Use when a domain hits 'too many DNS lookups' (PermError) and removing unused includes is not enough; run check_spf first to see the lookup graph and whether flattening is actually needed. Flattened records are high-maintenance — they break when a provider rotates IPs — so treat the output as a last resort to re-verify periodically. No auth, no side effects.",
+  { domain: domainSchema },
+  async ({ domain }) => jsonResponse(await apiGet("/spf/flatten", { domain }))
+);
+
+server.tool(
   "discover_dkim",
   "Read-only DKIM selector discovery for a domain. Queries ~150 common selectors used by Google, Microsoft, Mailgun, SendGrid, Postmark, Amazon SES, Brevo, MailChimp, Zoho, and other major ESPs. Returns each discovered selector with parsed key tags (v, k, t, p), public key length, algorithm strength, and warnings (weak key, revoked, empty p=). Use when you do not know which DKIM selectors a domain publishes; use check_email_security for combined SPF/DKIM/DMARC overview. No auth, ~3-8s due to many parallel DNS queries.",
   { domain: domainSchema },
@@ -367,6 +374,24 @@ server.tool(
   "Read-only analysis of a pasted raw RFC-5322 MIME email source. Parses Authentication-Results, Received chain, SPF/DKIM/DMARC/ARC verdicts, sender IP reputation/blacklist status, content-side spam triggers (suspicious URLs, misleading From, content/HTML imbalance), and produces a 0-100 spam score plus AI-assisted fix suggestions. `rawEmail` is full headers+body, max 500KB. Use to debug a specific failing email when the user can paste the raw source from their MUA; use create_email_test instead when the user can resend it. POST body is processed in-memory and not stored. No auth.",
   { rawEmail: z.string().describe("Raw email source including headers and body, max 500KB") },
   async ({ rawEmail }) => jsonResponse(await apiPost("/email-test/analyze-raw", { rawEmail }))
+);
+
+server.tool(
+  "parse_dmarc_report",
+  "Read-only parser for a DMARC aggregate (RUA) XML report (RFC 7489). Turns the raw XML that mailbox providers send into structured JSON: report metadata (org, report id, date range), the published policy (p/sp/adkim/aspf/pct), and one row per sending source with source IP, message count, evaluated disposition (none/quarantine/reject), aligned SPF/DKIM results, and pass/fail totals. Provide the report as `xml` (raw text) or `gzipBase64` (a base64-encoded .gz attachment). Use to programmatically read DMARC reports an agent fetched from the rua@ mailbox; the report is parsed in-memory and not stored. No auth, no side effects.",
+  {
+    xml: z.string().optional().describe("Raw DMARC aggregate report XML (root <feedback>)"),
+    gzipBase64: z.string().optional().describe("Base64-encoded gzip of the report (.gz attachment); used when xml is omitted"),
+  },
+  async ({ xml, gzipBase64 }) =>
+    jsonResponse(await apiPost("/dmarc/parse", gzipBase64 ? { gzipBase64 } : { xml }))
+);
+
+server.tool(
+  "whois_lookup",
+  "Read-only WHOIS/RDAP lookup for a domain or IP address. For domains it returns registrar, EPP domain-status codes, nameservers, registration/expiry/last-changed dates, and the abuse contact; for IPs it returns the network allocation (CIDR, name, type). Data is sourced live from the IANA RDAP bootstrap with an rdap.org fallback. Registrant personal data is usually GDPR-redacted — that is normal, not an error. Use to check domain ownership, age, or expiry, vet a suspicious domain, or find an abuse contact; for DNS records use lookup_dns instead. `query` is a domain name or an IPv4/IPv6 address. No auth, no side effects.",
+  { query: z.string().describe("A domain name (example.com) or an IPv4/IPv6 address") },
+  async ({ query }) => jsonResponse(await apiGet("/whois", { query }))
 );
 
 server.tool(
