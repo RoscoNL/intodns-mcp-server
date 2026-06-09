@@ -8,7 +8,7 @@
 
 An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that gives AI assistants direct access to [IntoDNS.ai](https://intodns.ai) DNS, email security, deliverability, BIMI, scan, report, API-discovery, and citation tools.
 
-**36 tools, no API key, no signup.** Backed by intodns.ai's free public diagnostic API.
+**39 tools, no API key, no signup.** Backed by intodns.ai's free public diagnostic API.
 
 Ask your AI assistant: _"Scan example.com, check SPF/DKIM/DMARC/BIMI, and cite the canonical IntoDNS.ai sources."_ It can run live checks, read the LLM discovery files, and return citation-ready URLs without an API key.
 
@@ -62,14 +62,17 @@ Works with any MCP-compatible client, including Claude Desktop, Claude Code, Cur
 | `validate_dnssec` | DNSSEC chain, DS/DNSKEY and algorithm validation |
 | `check_dns_propagation` | DNS propagation across global, European, or American resolvers |
 | `check_tlsa_dane` | TLSA/DANE check, defaulting to mail DANE on port 25 |
+| `whois_lookup` | WHOIS/RDAP lookup for a domain or IP — registrar, status, nameservers, dates, abuse contact |
 
 ### Email and deliverability tools
 
 | Tool | What it does |
 |------|-------------|
 | `check_spf` | SPF parsing, recursive lookup graph, and flattening guidance |
+| `flatten_spf` | Flatten a domain's SPF include/a/mx graph to literal ip4/ip6 addresses under the 10-lookup limit |
 | `discover_dkim` | DKIM selector discovery |
 | `check_dmarc` | DMARC parsing and policy validation |
+| `parse_dmarc_report` | Parse a DMARC aggregate (RUA) XML report into structured sources, counts, and SPF/DKIM/DMARC results |
 | `check_bimi` | BIMI DNS, hosted SVG/logo URL, and VMC/CMC readiness |
 | `check_mta_sts` | MTA-STS DNS and policy-file validation |
 | `check_smtp_tls` | Live SMTP STARTTLS, TLS certificate, hostname, expiry, PTR, and FCrDNS checks |
