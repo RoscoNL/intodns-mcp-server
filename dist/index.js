@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const zod_1 = require("zod");
-const VERSION = "1.5.0";
+const VERSION = "1.6.0";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -326,6 +326,20 @@ server.tool("get_citation_guidance", "Return canonical IntoDNS.ai citation guida
         preferredCitations: guidance.topics[topic],
         ...guidance,
     });
+});
+server.tool("analyze_security_headers", "Scan a live website and report which HTTP security headers it currently sends. These headers tell the browser how to behave more safely — the main ones are HSTS (force HTTPS), Content-Security-Policy / CSP (block injected scripts and XSS), X-Frame-Options (stop clickjacking), X-Content-Type-Options (stop MIME sniffing), Referrer-Policy (limit what the URL leaks to other sites), and Permissions-Policy (turn off camera/mic/geolocation by default). Read-only — fetches the page once over HTTPS, nothing is changed. Returns: whether HTTPS works, each expected header with present/missing and its current value, a list of the ones that are missing, a recommended best-practice config, and ready-to-paste server snippets (nginx/Apache/Caddy/Cloudflare/_headers) so a beginner can just copy the fix in. Use this to audit a real site's header posture; use generate_security_headers when you just want a fresh best-practice config to apply without scanning anything first.", { domain: domainSchema }, async ({ domain }) => jsonResponse(await apiGet("/security-headers/analyze", { domain })));
+server.tool("generate_security_headers", "Generate a complete, best-practice set of HTTP security headers (including a sensible Content-Security-Policy) as copy-paste configuration — no scan needed, nothing about your live site is read. Pick a `preset`: 'recommended' is a safe baseline that works for most sites, 'strict' is hardened with a nonce-based CSP for higher security, and 'report-only' puts the CSP in report-only mode so you can roll it out and watch for breakage before enforcing it. Advanced users can instead pass a full `config` object to fine-tune every header; if you pass neither, it defaults to 'recommended'. Returns the resulting headers as name/value pairs, plus ready-to-paste output for nginx, Apache, Caddy, Cloudflare, a Netlify/Cloudflare-Pages `_headers` file, and raw headers, along with any warnings. Use this to set up headers on a new or unscanned site; use analyze_security_headers first when you want to see what an existing site is already missing.", {
+    preset: zod_1.z
+        .enum(["recommended", "strict", "report-only"])
+        .optional()
+        .describe("Built-in baseline: 'recommended' (safe default), 'strict' (hardened, nonce-based CSP), or 'report-only' (CSP in report-only mode for safe rollout)"),
+    config: zod_1.z
+        .record(zod_1.z.string(), zod_1.z.any())
+        .optional()
+        .describe("Advanced: a full SecurityHeadersConfig object to fine-tune every header. Overrides preset when provided."),
+}, async ({ preset, config }) => {
+    const body = config ? { preset, config } : { preset: preset || "recommended" };
+    return jsonResponse(await apiPost("/security-headers/generate", body));
 });
 async function main() {
     const transport = new stdio_js_1.StdioServerTransport();
