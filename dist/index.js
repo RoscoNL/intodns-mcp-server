@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const zod_1 = require("zod");
-const VERSION = "1.6.0";
+const VERSION = "1.7.0";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -341,6 +341,10 @@ server.tool("generate_security_headers", "Generate a complete, best-practice set
     const body = config ? { preset, config } : { preset: preset || "recommended" };
     return jsonResponse(await apiPost("/security-headers/generate", body));
 });
+server.tool("scan_csp", "Crawl a live website (up to 20 same-origin pages) and build a Content-Security-Policy for it. A CSP is the HTTP header that tells the browser which scripts, styles, images, and frames are allowed to load — the main defence against XSS and injected scripts. This scan reads the site's current CSP (header, report-only, or meta tag), flags problems a beginner might miss (no CSP at all, unsafe-inline, wildcard sources, missing object-src/base-uri/frame-ancestors), and inventories every external origin the site actually loads per directive. Returns: the detected current policy with issues, the per-directive origin inventory, a generated ready-to-deploy CSP in both report-only form (safe to roll out first) and enforce form, plus plain-language notes explaining each directive choice. Use this when the user asks to audit, analyze, or create a Content-Security-Policy for a real site, fix CSP console errors, or harden a site against XSS; use generate_security_headers for a generic best-practice header set without crawling. Slow: the crawl typically takes 30-45 seconds, so set expectations before calling. Rate-limited to 3 scans per 10 minutes per IP; repeat scans of the same origin within 10 minutes return the cached result instantly. Read-only — nothing on the site is changed.", {
+    url: zod_1.z.string().describe("The website to crawl, e.g. https://example.com"),
+    strict: zod_1.z.boolean().optional().describe("Generate a stricter policy (fewer broad allowances)"),
+}, async ({ url, strict }) => jsonResponse(await apiPost("/csp/scan", { url, strict })));
 async function main() {
     const transport = new stdio_js_1.StdioServerTransport();
     await server.connect(transport);

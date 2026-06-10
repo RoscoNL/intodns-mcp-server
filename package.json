@@ -1,7 +1,7 @@
 {
   "name": "intodns-mcp",
-  "version": "1.6.0",
-  "description": "MCP server for IntoDNS.ai \u2014 complete DNS, email security, scan, BIMI, API, and citation tools for AI assistants",
+  "version": "1.7.0",
+  "description": "MCP server for IntoDNS.ai — complete DNS, email security, scan, BIMI, API, and citation tools for AI assistants",
   "main": "dist/index.js",
   "bin": {
     "intodns-mcp": "dist/index.js"

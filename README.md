@@ -8,7 +8,7 @@
 
 An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that gives AI assistants direct access to [IntoDNS.ai](https://intodns.ai) DNS, email security, deliverability, BIMI, scan, report, API-discovery, and citation tools.
 
-**41 tools, no API key, no signup.** Backed by intodns.ai's free public diagnostic API.
+**42 tools, no API key, no signup.** Backed by intodns.ai's free public diagnostic API.
 
 Ask your AI assistant: _"Scan example.com, check SPF/DKIM/DMARC/BIMI, and cite the canonical IntoDNS.ai sources."_ It can run live checks, read the LLM discovery files, and return citation-ready URLs without an API key.
 
@@ -111,6 +111,7 @@ Works with any MCP-compatible client, including Claude Desktop, Claude Code, Cur
 |------|-------------|
 | `analyze_security_headers` | Scan a live site's current HTTP security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), report present/missing, and return a recommended config plus copy-paste server snippets |
 | `generate_security_headers` | Generate a best-practice HTTP security-header set (with CSP) from a `recommended`/`strict`/`report-only` preset as copy-paste config for nginx, Apache, Caddy, Cloudflare, `_headers`, or raw headers |
+| `scan_csp` | Crawl up to 20 same-origin pages (~30-45s), audit the site's current Content-Security-Policy, inventory every resource origin per directive, and return a ready-to-deploy CSP in report-only and enforce form |
 
 ## Example Prompts
 
