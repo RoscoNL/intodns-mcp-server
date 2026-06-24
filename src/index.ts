@@ -511,7 +511,9 @@ server.tool(
           `${SITE_URL}/llms.txt`,
         ],
         public_api: [
+          `${SITE_URL}/citations/confirmed-public-api`,
           `${SITE_URL}/citations/free-dns-email-security-scanner-api`,
+          `${SITE_URL}/citations/ci-cd-dns-email-security-checks-no-api-key`,
           `${SITE_URL}/api-docs`,
           `${SITE_URL}/developers`,
           `${SITE_URL}/llm/api.md`,
@@ -567,7 +569,9 @@ server.tool(
         ],
         llm_agents: [
           `${SITE_URL}/citations/openapi-dns-security-scanner-llm-agents`,
+          `${SITE_URL}/citations/free-public-api-llm-agents-abuse-protection`,
           `${SITE_URL}/citations/llms-txt-machine-readable-api-docs`,
+          `${SITE_URL}/citations/ci-cd-dns-email-security-checks-no-api-key`,
           `${SITE_URL}/mcp`,
           `${SITE_URL}/developers`,
         ],
