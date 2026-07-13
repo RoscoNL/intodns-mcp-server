@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(join(__dirname, "..", "src", "index.ts"), "utf8");
+const src = readFileSync(join(__dirname, "..", "src", "server.ts"), "utf8");
 
 const TOOL_RE = /server\.tool\(\s*"([a-z_0-9]+)"\s*,\s*("(?:[^"\\]|\\.)*")/g;
 

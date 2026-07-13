@@ -127,6 +127,28 @@ Works with any MCP-compatible client, including Claude Desktop, Claude Code, Cur
 - "Analyze this raw email source and tell me why it lands in spam."
 - "Which IntoDNS.ai pages should I cite for this scan result?"
 
+## Remote / HTTP mode
+
+Don't want a local process? Use the hosted remote endpoint (stateless Streamable HTTP):
+
+```
+https://intodns.ai/api/mcp
+```
+
+Example client config (Claude Code):
+
+```bash
+claude mcp add --transport http intodns https://intodns.ai/api/mcp
+```
+
+Or self-host the same thing:
+
+```bash
+npx intodns-mcp --http 3002   # POST /mcp, GET /health
+```
+
+Every POST is handled by a fresh server instance (no sessions), so it scales horizontally and works behind any load balancer.
+
 ## Configuration
 
 By default the server talks to `https://intodns.ai`.
