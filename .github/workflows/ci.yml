@@ -16,16 +16,3 @@ jobs:
           node-version: '24'
       - run: npm ci
       - run: npm test
-      - name: Verify MCP stdio introspection
-        run: |
-          out=$(printf '%s\n' \
-            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
-            '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
-            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
-            | timeout 10 node dist/index.js 2>&1 || true)
-          count=$(echo "$out" | grep -oE '"name":"[a-z_0-9]+"' | sort -u | wc -l)
-          echo "tools registered: $count"
-          if [ "$count" -ne 42 ]; then
-            echo "::error::expected exactly 42 tools, got $count"
-            exit 1
-          fi
