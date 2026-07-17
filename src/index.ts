@@ -13,7 +13,11 @@ Usage:
   intodns-mcp --version    Show version
 
 Environment:
-  INTODNS_SITE_URL   Base site URL (default https://intodns.ai)
+  INTODNS_SITE_URL          Base site URL (default https://intodns.ai)
+  INTODNS_REQUEST_TIMEOUT_MS  Upstream timeout in milliseconds (default 60000)
+  INTODNS_HTTP_HOST         HTTP bind address (default 127.0.0.1)
+  INTODNS_ALLOWED_HOSTS     Extra comma-separated HTTP Host values
+  INTODNS_ALLOWED_ORIGINS   Extra comma-separated browser origins
 `);
 }
 

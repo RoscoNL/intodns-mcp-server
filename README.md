@@ -147,7 +147,7 @@ Or self-host the same thing:
 npx intodns-mcp --http 3002   # POST /mcp, GET /health
 ```
 
-Every POST is handled by a fresh server instance (no sessions), so it scales horizontally and works behind any load balancer.
+The standalone server binds to `127.0.0.1` by default. Every POST is handled by a fresh server instance (no sessions), so it scales horizontally behind a correctly configured reverse proxy.
 
 ## Configuration
 
@@ -158,6 +158,17 @@ For local testing or staging, set:
 ```bash
 INTODNS_SITE_URL=http://localhost:3000 npx -y intodns-mcp
 ```
+
+Optional HTTP and upstream safeguards:
+
+```bash
+INTODNS_REQUEST_TIMEOUT_MS=60000
+INTODNS_HTTP_HOST=127.0.0.1
+INTODNS_ALLOWED_HOSTS=mcp.example.com
+INTODNS_ALLOWED_ORIGINS=https://mcp.example.com
+```
+
+`INTODNS_HTTP_HOST=0.0.0.0` is intended only for containers or reverse-proxy deployments. Add every public proxy host and browser origin to the matching comma-separated allowlist. Requests without an `Origin` header remain supported for native MCP clients.
 
 ## Requirements
 

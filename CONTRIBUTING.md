@@ -2,7 +2,7 @@
 
 ## Tool description template
 
-Every `server.tool()` description in `src/index.ts` MUST cover the six Glama TDQS dimensions or it will lower the listing's score (and worse, leave agents guessing about when to call the tool).
+Every `server.tool()` description in `src/server.ts` MUST cover the six Glama TDQS dimensions or it will lower the listing's score (and worse, leave agents guessing about when to call the tool).
 
 ### Required structure
 
@@ -49,8 +49,7 @@ server.tool(
 Run before every release:
 
 ```bash
-npm run lint:tools   # Lint tool descriptions against the template
-npm run build        # tsc + chmod
+npm test             # Description lint, TypeScript build, catalog and HTTP tests
 ```
 
 `lint:tools` will fail the build if any tool has a description shorter than 200 characters or missing usage guidance markers (`use`, `instead`, `after`).

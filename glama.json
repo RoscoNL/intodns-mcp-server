@@ -2,7 +2,7 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": ["RoscoNL"],
   "name": "intodns-mcp",
-  "description": "DNS, email security and NIS2 Article 21.2 scanner for AI agents. 36 deterministic tools backed by intodns.ai's free public API — SPF, DKIM, DMARC, MTA-STS, BIMI, DNSSEC, TLSA, blacklist, sender requirements, and a full NIS2 21.2 quickscan. No API key required.",
+  "description": "DNS, email security and NIS2 Article 21.2 scanner for AI agents. 42 deterministic tools backed by intodns.ai's free public API — SPF, DKIM, DMARC, MTA-STS, BIMI, DNSSEC, TLSA, blacklist, sender requirements, and a full NIS2 21.2 quickscan. No API key required.",
   "keywords": [
     "dns",
     "email-security",
