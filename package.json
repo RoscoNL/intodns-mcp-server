@@ -1,6 +1,6 @@
 {
   "name": "intodns-mcp",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "MCP server for IntoDNS.ai \u2014 complete DNS, email security, scan, BIMI, API, and citation tools for AI assistants",
   "main": "dist/index.js",
   "bin": {
@@ -15,8 +15,9 @@
     "build": "tsc && chmod +x dist/index.js",
     "start": "node dist/index.js",
     "lint:tools": "node scripts/lint-tool-descriptions.mjs",
-    "test": "node scripts/lint-tool-descriptions.mjs",
-    "prepublishOnly": "npm run lint:tools && npm run build",
+    "test": "npm run lint:tools && npm run build && node --test tests/*.test.mjs",
+    "test:live": "npm run build && node scripts/live-smoke.mjs",
+    "prepublishOnly": "npm test",
     "prepare": "npm run build"
   },
   "keywords": [
@@ -40,12 +41,12 @@
   "author": "Cobytes B.V.",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.10.2",
-    "zod": "^3.25.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.7.0"
+    "@types/node": "^22.19.17",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18"
