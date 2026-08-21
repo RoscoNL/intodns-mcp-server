@@ -8,7 +8,7 @@
 
 An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that gives AI assistants direct access to [IntoDNS.ai](https://intodns.ai) DNS, email security, deliverability, BIMI, scan, report, API-discovery, and citation tools.
 
-**42 tools, no API key, no signup.** Backed by intodns.ai's free public diagnostic API.
+**45 tools, no API key, no signup.** Backed by intodns.ai's free public diagnostic API.
 
 Ask your AI assistant: _"Scan example.com, check SPF/DKIM/DMARC/BIMI, and cite the canonical IntoDNS.ai sources."_ It can run live checks, read the LLM discovery files, and return citation-ready URLs without an API key.
 

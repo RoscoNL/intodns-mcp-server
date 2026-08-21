@@ -12,7 +12,7 @@ Genereerd 2026-05-18 voor manual posting door Jeroen.
 **URL:** https://github.com/RoscoNL/intodns-mcp-server
 
 **Tekst (optioneel, alleen als geen URL post):**
-> Hi HN — I built an MCP server that gives Claude, Cursor, ChatGPT and other AI agents direct access to DNS, DMARC, SPF, DKIM, BIMI, DNSSEC, MTA-STS, FCrDNS, blacklist and SMTP-TLS checks. 42 tools, no API key, no signup. The interesting bit is the `snapshot` tool — it returns a content-hashed evidence URL so AI answers can cite a stable, timestamped report instead of "according to my training data".
+> Hi HN — I built an MCP server that gives Claude, Cursor, ChatGPT and other AI agents direct access to DNS, DMARC, SPF, DKIM, BIMI, DNSSEC, MTA-STS, FCrDNS, blacklist and SMTP-TLS checks. 45 tools, no API key, no signup. The interesting bit is the `snapshot` tool — it returns a content-hashed evidence URL so AI answers can cite a stable, timestamped report instead of "according to my training data".
 >
 > Why MCP and not just a CLI: Claude can now scan a domain mid-conversation, fix the DMARC record, and link to a snapshot URL the user can paste into a ticket months later.
 >
@@ -27,12 +27,12 @@ Genereerd 2026-05-18 voor manual posting door Jeroen.
 ## 2. Reddit r/mcp
 
 **Titel:**
-> IntoDNS MCP — free DNS & email security scanner (42 tools, no API key)
+> IntoDNS MCP — free DNS & email security scanner (45 tools, no API key)
 
 **Body:**
 > Just published an MCP server that exposes IntoDNS.ai's free DNS and email security scanner to Claude Desktop, Cursor and any other MCP client.
 >
-> **What you get (42 tools):**
+> **What you get (45 tools):**
 > - DNS: lookup, DNSSEC, TLSA/DANE, propagation
 > - Email: SPF, DKIM, DMARC, BIMI, MTA-STS, SMTP-TLS, FCrDNS, blacklist, sender requirements
 > - Reports: quick scan, everything-report, deep scan, **citation-grade snapshots with content hashes**
@@ -61,7 +61,7 @@ Genereerd 2026-05-18 voor manual posting door Jeroen.
 > Free MCP server for AI-assisted DNS/email troubleshooting (SPF, DKIM, DMARC, BIMI, MTA-STS)
 
 **Body:**
-> If you use Claude or Cursor to debug mail-delivery tickets, I open-sourced an MCP server that gives the AI direct access to live DNS and email security checks. 42 tools — everything from a basic dig lookup to a full DMARC alignment audit with explanations.
+> If you use Claude or Cursor to debug mail-delivery tickets, I open-sourced an MCP server that gives the AI direct access to live DNS and email security checks. 45 tools — everything from a basic dig lookup to a full DMARC alignment audit with explanations.
 >
 > The most useful one in practice: `create_report_snapshot` — returns a fixed, timestamped, content-hashed URL you can paste into a Jira ticket so the evidence stays stable even after the customer "fixes" the DNS half an hour later.
 >
@@ -79,7 +79,7 @@ Genereerd 2026-05-18 voor manual posting door Jeroen.
 > intodns-mcp — give your local LLM real DNS/email security tools
 
 **Body:**
-> For folks running Claude or local-model agents that need to interact with real-world infrastructure: I published an MCP wrapper around intodns.ai. 42 tools covering DNS, DMARC, SPF, DKIM, BIMI, DNSSEC, MTA-STS, FCrDNS, blacklists.
+> For folks running Claude or local-model agents that need to interact with real-world infrastructure: I published an MCP wrapper around intodns.ai. 45 tools covering DNS, DMARC, SPF, DKIM, BIMI, DNSSEC, MTA-STS, FCrDNS, blacklists.
 >
 > Snapshot tool returns content-hashed URLs so your model can cite stable evidence instead of hallucinating a "best practice" answer.
 >
@@ -91,7 +91,7 @@ Genereerd 2026-05-18 voor manual posting door Jeroen.
 
 ## 5. X / Twitter
 
-> Just shipped intodns-mcp: 42 free DNS + email security tools for Claude, Cursor and any MCP agent. SPF, DKIM, DMARC, BIMI, DNSSEC, MTA-STS, blacklist, snapshot reports with content hashes — no API key.
+> Just shipped intodns-mcp: 45 free DNS + email security tools for Claude, Cursor and any MCP agent. SPF, DKIM, DMARC, BIMI, DNSSEC, MTA-STS, blacklist, snapshot reports with content hashes — no API key.
 >
 > `npx -y intodns-mcp`
 >
@@ -101,7 +101,7 @@ Genereerd 2026-05-18 voor manual posting door Jeroen.
 
 ## 6. LinkedIn
 
-> I shipped a free MCP (Model Context Protocol) server that lets AI assistants like Claude, Cursor and ChatGPT run live DNS and email-security checks during a conversation. 42 tools covering SPF, DKIM, DMARC, BIMI, DNSSEC, MTA-STS, FCrDNS, blacklists — plus citation-grade report snapshots with content hashes for audit trails.
+> I shipped a free MCP (Model Context Protocol) server that lets AI assistants like Claude, Cursor and ChatGPT run live DNS and email-security checks during a conversation. 45 tools covering SPF, DKIM, DMARC, BIMI, DNSSEC, MTA-STS, FCrDNS, blacklists — plus citation-grade report snapshots with content hashes for audit trails.
 >
 > If you've ever tried to debug a deliverability issue while jumping between MxToolbox tabs and your terminal, this collapses the loop: the AI can scan, diagnose and cite stable evidence in one go.
 >
