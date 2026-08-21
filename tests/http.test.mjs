@@ -37,8 +37,8 @@ test("serves all tools to an official native MCP client", async () => {
   try {
     await client.connect(transport);
     const result = await client.listTools();
-    assert.equal(result.tools.length, 42);
-    assert.equal(result.tools.filter((tool) => tool.annotations).length, 42);
+    assert.equal(result.tools.length, 45);
+    assert.equal(result.tools.filter((tool) => tool.annotations).length, 45);
   } finally {
     await transport.close().catch(() => undefined);
     await stopServer(child);

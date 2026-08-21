@@ -803,6 +803,71 @@ server.tool(
 );
 
 server.tool(
+  "generate_spf",
+  "Build an SPF (Sender Policy Framework) record — the DNS TXT record that lists which servers may send mail for a domain. Pass the senders as `mechanisms`: `include` for a provider's own SPF (Google Workspace is `_spf.google.com`, Microsoft 365 is `spf.protection.outlook.com`, SendGrid is `sendgrid.net`), `ip4`/`ip6` for your own servers, plus `useMx`/`useA` to authorise the domain's own MX or A records. The `policy` decides what receivers do with mail from anywhere else: 'fail' (-all, the production choice), 'softfail' (~all, for testing), 'neutral', or 'pass' (+all, which authorises the entire internet and should never be published). The reason to call this rather than write the string yourself: SPF is limited to ten DNS lookups when it is evaluated, and exceeding that is a PermError which receivers treat as the domain having no SPF at all. include, a, mx, exists and redirect each cost a lookup; ip4 and ip6 are free. Returns the record, the lookup count, whether either the lookup or 255-character limit is exceeded, warnings in plain language, and the DNS entry to publish. Use check_spf instead to read and validate the record a domain already publishes, and flatten_spf when an existing record is over the lookup limit and has to be reduced; use this to build a new record from scratch. Nothing is looked up or stored — this is computation only.",
+  {
+    mechanisms: z
+      .array(
+        z.object({
+          type: z.enum(["ip4", "ip6", "include", "a", "mx", "exists", "redirect"]),
+          value: z.string().describe("The value after the colon, e.g. '_spf.google.com' for an include or '203.0.113.5' for ip4"),
+        }),
+      )
+      .optional()
+      .describe("Senders to authorise, in the order they should appear in the record"),
+    useA: z.boolean().optional().describe("Authorise the domain's own A/AAAA records. Costs one DNS lookup."),
+    useMx: z.boolean().optional().describe("Authorise the domain's MX hosts. Costs one DNS lookup."),
+    policy: z
+      .enum(["fail", "softfail", "neutral", "pass"])
+      .optional()
+      .describe("What receivers do with everything else: fail (-all) for production, softfail (~all) while testing. Defaults to fail."),
+  },
+  READ_ONLY_TOOL,
+  async ({ mechanisms, useA, useMx, policy }) => {
+    return jsonResponse(await apiPost("/email/spf/generate", { mechanisms, useA, useMx, policy }));
+  }
+);
+
+server.tool(
+  "generate_dmarc",
+  "Build a DMARC record — the `_dmarc` TXT record that tells receivers what to do when a message fails SPF and DKIM alignment, and where to send reports about it. The risk here is not syntax but policy. `p=none` monitors without affecting delivery and is where every deployment starts; `p=quarantine` sends failures to spam; `p=reject` refuses them outright, which silently destroys legitimate mail from any sender that was missed and gives that sender no explanation. Always publish a `rua` address: without aggregate reports there is no way to see which senders fail before enforcing against them. Use `percentage` to apply an enforcing policy to only part of the mail while rolling out. Returns the record, the host to publish it on (`_dmarc`), and warnings covering the mistakes that actually break mail — enforcing without reporting, reject at full coverage, pct at p=none, and strict alignment breaking subdomain senders and ESPs. Nothing is looked up or stored.",
+  {
+    policy: z
+      .enum(["none", "quarantine", "reject"])
+      .optional()
+      .describe("p= — start at 'none' and only enforce once reports show all legitimate senders aligning. Defaults to none."),
+    subdomainPolicy: z.enum(["none", "quarantine", "reject"]).optional().describe("sp= — a different policy for subdomains. Omitted when it matches the main policy."),
+    rua: z.union([z.string(), z.array(z.string())]).optional().describe("Aggregate report address(es). mailto: is added automatically."),
+    ruf: z.union([z.string(), z.array(z.string())]).optional().describe("Forensic report address(es). Contains message content and is honoured by very few receivers."),
+    percentage: z.number().int().min(1).max(100).optional().describe("pct= — share of mail the policy applies to, for a gradual rollout. Has no effect at p=none."),
+    spfAlignment: z.enum(["relaxed", "strict"]).optional().describe("aspf= — strict requires an exact domain match and breaks subdomain senders."),
+    dkimAlignment: z.enum(["relaxed", "strict"]).optional().describe("adkim= — strict requires an exact domain match and breaks many ESPs."),
+    reportInterval: z.number().int().min(60).max(604800).optional().describe("ri= — seconds between aggregate reports. Defaults to 86400 (daily)."),
+  },
+  READ_ONLY_TOOL,
+  async (args) => {
+    return jsonResponse(await apiPost("/email/dmarc/generate", args));
+  }
+);
+
+server.tool(
+  "generate_tlsa",
+  "Build a DANE TLSA record from a certificate or public key — the DNS record that pins which certificate a mail server may present, so an attacker cannot strip STARTTLS or substitute another CA-issued certificate. Paste the PEM (a CERTIFICATE or PUBLIC KEY block) as `pem`; the hash is computed here because a language model cannot hash. Never send a private key: none is needed and the request is refused if one is present. The three numbers: `usage` 3 (DANE-EE) pins the end-entity key and needs no CA, `selector` 1 hashes the SubjectPublicKeyInfo, `matching` 1 is SHA-256 — the 3 1 1 profile recommended for SMTP, because it survives certificate renewal as long as the key is reused. `host` must be the mail server hostname from the MX record, not the domain. Two things break DANE and both are reported: a TLSA record in a zone without DNSSEC proves nothing and is ignored, and DANE fails closed, so installing a new certificate before the matching record has propagated stops mail from every sender that validates. Returns the record, the hash, what each number means, and the DNS entry.",
+  {
+    pem: z.string().describe("PEM block: -----BEGIN CERTIFICATE----- or -----BEGIN PUBLIC KEY-----. Never a private key."),
+    usage: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional().describe("0 PKIX-TA, 1 PKIX-EE, 2 DANE-TA, 3 DANE-EE. Use 3 for SMTP. Defaults to 3."),
+    selector: z.union([z.literal(0), z.literal(1)]).optional().describe("0 full certificate, 1 SubjectPublicKeyInfo. Use 1. Defaults to 1."),
+    matching: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional().describe("0 exact, 1 SHA-256, 2 SHA-512. Use 1. Defaults to 1."),
+    host: z.string().optional().describe("Mail server hostname from the MX record, e.g. mail.example.com — not the domain itself."),
+    port: z.number().int().min(1).max(65535).optional().describe("Port the record covers. Defaults to 25 for SMTP."),
+  },
+  READ_ONLY_TOOL,
+  async (args) => {
+    return jsonResponse(await apiPost("/dns/tlsa/generate", args));
+  }
+);
+
+server.tool(
   "scan_csp",
   "Crawl a live website (up to 20 same-origin pages) and build a Content-Security-Policy for it. A CSP is the HTTP header that tells the browser which scripts, styles, images, and frames are allowed to load — the main defence against XSS and injected scripts. This scan reads the site's current CSP (header, report-only, or meta tag), flags problems a beginner might miss (no CSP at all, unsafe-inline, wildcard sources, missing object-src/base-uri/frame-ancestors), and inventories every external origin the site actually loads per directive. Returns: the detected current policy with issues, the per-directive origin inventory, a generated ready-to-deploy CSP in both report-only form (safe to roll out first) and enforce form, plus plain-language notes explaining each directive choice. Use this when the user asks to audit, analyze, or create a Content-Security-Policy for a real site, fix CSP console errors, or harden a site against XSS; use generate_security_headers for a generic best-practice header set without crawling. Slow: the crawl typically takes 30-45 seconds, so set expectations before calling. Rate-limited to 3 scans per 10 minutes per IP; repeat scans of the same origin within 10 minutes return the cached result instantly. Read-only — nothing on the site is changed.",
   {

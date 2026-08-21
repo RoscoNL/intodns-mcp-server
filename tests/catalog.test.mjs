@@ -53,8 +53,8 @@ async function inspectServer() {
 
 test("publishes a truthful, annotated MCP catalog", async () => {
   const { tools, callResult } = await inspectServer();
-  assert.equal(tools.length, 42);
-  assert.equal(tools.filter((tool) => tool.annotations).length, 42);
+  assert.equal(tools.length, 45);
+  assert.equal(tools.filter((tool) => tool.annotations).length, 45);
 
   const discoverDkim = tools.find((tool) => tool.name === "discover_dkim");
   assert.ok(discoverDkim.inputSchema.properties.selector);
