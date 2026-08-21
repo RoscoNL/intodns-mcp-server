@@ -502,12 +502,21 @@ function registerTools(server) {
         subdomainPolicy: zod_1.z.enum(["none", "quarantine", "reject"]).optional().describe("sp= — a different policy for subdomains. Omitted when it matches the main policy."),
         rua: zod_1.z.union([zod_1.z.string(), zod_1.z.array(zod_1.z.string())]).optional().describe("Aggregate report address(es). mailto: is added automatically."),
         ruf: zod_1.z.union([zod_1.z.string(), zod_1.z.array(zod_1.z.string())]).optional().describe("Forensic report address(es). Contains message content and is honoured by very few receivers."),
-        percentage: zod_1.z.number().int().min(1).max(100).optional().describe("pct= — share of mail the policy applies to, for a gradual rollout. Has no effect at p=none."),
+        percentage: zod_1.z.number().int().min(1).max(100).optional().describe("pct= — share of mail the policy applies to, for a gradual rollout. Has no effect at p=none. Also accepted as `pct`."),
+        pct: zod_1.z.number().int().min(1).max(100).optional().describe("Alias for `percentage`, matching the DNS tag name."),
         spfAlignment: zod_1.z.enum(["relaxed", "strict"]).optional().describe("aspf= — strict requires an exact domain match and breaks subdomain senders."),
         dkimAlignment: zod_1.z.enum(["relaxed", "strict"]).optional().describe("adkim= — strict requires an exact domain match and breaks many ESPs."),
         reportInterval: zod_1.z.number().int().min(60).max(604800).optional().describe("ri= — seconds between aggregate reports. Defaults to 86400 (daily)."),
-    }, READ_ONLY_TOOL, async (args) => {
-        return jsonResponse(await apiPost("/email/dmarc/generate", args));
+    }, READ_ONLY_TOOL, async ({ pct, ...args }) => {
+        // The description names this tag `pct=` throughout, because that is what it
+        // is called in DNS, while the parameter is `percentage`. Zod strips unknown
+        // keys, so a caller reaching for the tag name got a record with no rollout
+        // limit and no warning — an enforcing policy applied to all mail when they
+        // asked for part of it, which is the exact failure this tool exists to avoid.
+        return jsonResponse(await apiPost("/email/dmarc/generate", {
+            ...args,
+            percentage: args.percentage ?? pct,
+        }));
     });
     server.tool("generate_tlsa", "Build a DANE TLSA record from a certificate or public key — the DNS record that pins which certificate a mail server may present, so an attacker cannot strip STARTTLS or substitute another CA-issued certificate. Paste the PEM (a CERTIFICATE or PUBLIC KEY block) as `pem`; the hash is computed here because a language model cannot hash. Never send a private key: none is needed and the request is refused if one is present. The three numbers: `usage` 3 (DANE-EE) pins the end-entity key and needs no CA, `selector` 1 hashes the SubjectPublicKeyInfo, `matching` 1 is SHA-256 — the 3 1 1 profile recommended for SMTP, because it survives certificate renewal as long as the key is reused. `host` must be the mail server hostname from the MX record, not the domain. Two things break DANE and both are reported: a TLSA record in a zone without DNSSEC proves nothing and is ignored, and DANE fails closed, so installing a new certificate before the matching record has propagated stops mail from every sender that validates. Returns the record, the hash, what each number means, and the DNS entry.", {
         pem: zod_1.z.string().describe("PEM block: -----BEGIN CERTIFICATE----- or -----BEGIN PUBLIC KEY-----. Never a private key."),

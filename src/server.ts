@@ -839,14 +839,23 @@ server.tool(
     subdomainPolicy: z.enum(["none", "quarantine", "reject"]).optional().describe("sp= — a different policy for subdomains. Omitted when it matches the main policy."),
     rua: z.union([z.string(), z.array(z.string())]).optional().describe("Aggregate report address(es). mailto: is added automatically."),
     ruf: z.union([z.string(), z.array(z.string())]).optional().describe("Forensic report address(es). Contains message content and is honoured by very few receivers."),
-    percentage: z.number().int().min(1).max(100).optional().describe("pct= — share of mail the policy applies to, for a gradual rollout. Has no effect at p=none."),
+    percentage: z.number().int().min(1).max(100).optional().describe("pct= — share of mail the policy applies to, for a gradual rollout. Has no effect at p=none. Also accepted as `pct`."),
+    pct: z.number().int().min(1).max(100).optional().describe("Alias for `percentage`, matching the DNS tag name."),
     spfAlignment: z.enum(["relaxed", "strict"]).optional().describe("aspf= — strict requires an exact domain match and breaks subdomain senders."),
     dkimAlignment: z.enum(["relaxed", "strict"]).optional().describe("adkim= — strict requires an exact domain match and breaks many ESPs."),
     reportInterval: z.number().int().min(60).max(604800).optional().describe("ri= — seconds between aggregate reports. Defaults to 86400 (daily)."),
   },
   READ_ONLY_TOOL,
-  async (args) => {
-    return jsonResponse(await apiPost("/email/dmarc/generate", args));
+  async ({ pct, ...args }) => {
+    // The description names this tag `pct=` throughout, because that is what it
+    // is called in DNS, while the parameter is `percentage`. Zod strips unknown
+    // keys, so a caller reaching for the tag name got a record with no rollout
+    // limit and no warning — an enforcing policy applied to all mail when they
+    // asked for part of it, which is the exact failure this tool exists to avoid.
+    return jsonResponse(await apiPost("/email/dmarc/generate", {
+      ...args,
+      percentage: args.percentage ?? pct,
+    }));
   }
 );
 
