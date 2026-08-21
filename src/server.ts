@@ -493,7 +493,7 @@ server.tool(
   "Read-only query against the currently configured public DNSBL/RBL providers (roughly 60, with noisy providers explicitly disabled). Provide either `domain` to resolve and inspect its MX IPv4 addresses or an IPv4 `ip` for a direct check; at least one is required. Returns each provider's listed/clean result, severity, removal metadata, plus unavailable and disabled provider evidence so timeouts are not misreported as clean. Use for mail-server reputation triage; it is not a delisting service. No auth or destructive actions.",
   {
     domain: domainSchema.optional(),
-    ip: z.string().ip({ version: "v4" }).optional().describe("IPv4 address to check directly"),
+    ip: z.ipv4().optional().describe("IPv4 address to check directly"),
   },
   READ_ONLY_TOOL,
   async ({ domain, ip }) => {

@@ -1,7 +1,7 @@
 {
   "name": "intodns-mcp",
   "version": "1.10.0",
-  "description": "MCP server for IntoDNS.ai \u2014 complete DNS, email security, scan, BIMI, API, and citation tools for AI assistants",
+  "description": "MCP server for IntoDNS.ai — complete DNS, email security, scan, BIMI, API, and citation tools for AI assistants",
   "main": "dist/index.js",
   "bin": {
     "intodns-mcp": "dist/index.js"
@@ -42,11 +42,11 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^3.25.76"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@types/node": "^22.19.17",
-    "typescript": "^5.9.3"
+    "@types/node": "^25.0.3",
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=18"

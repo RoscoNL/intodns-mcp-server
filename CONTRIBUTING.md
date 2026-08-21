@@ -1,5 +1,14 @@
 # Contributing
 
+## Where this code is edited
+
+This repository is a publish mirror. `src/` is edited in the IntoDNS monorepo
+under `mcp/`, where the same package is an npm workspace and the site's
+`/api/mcp` route imports it directly — so a tool change and its deployment are
+one commit. Pull requests here are welcome; they are applied upstream and land
+back on the next release push.
+
+
 ## Tool description template
 
 Every `server.tool()` description in `src/server.ts` MUST cover the six Glama TDQS dimensions or it will lower the listing's score (and worse, leave agents guessing about when to call the tool).
