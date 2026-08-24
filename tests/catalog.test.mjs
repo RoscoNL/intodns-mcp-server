@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { VERSION } from "../dist/server.js";
+
+test("runtime version matches the published package version", async () => {
+  const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(VERSION, packageJson.version);
+});
 
 async function inspectServer() {
   const child = spawn(process.execPath, ["dist/index.js"], {

@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-export const VERSION = "1.9.0";
+export const VERSION = "1.10.1";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -804,7 +804,7 @@ server.tool(
 
 server.tool(
   "generate_spf",
-  "Build an SPF (Sender Policy Framework) record — the DNS TXT record that lists which servers may send mail for a domain. Pass the senders as `mechanisms`: `include` for a provider's own SPF (Google Workspace is `_spf.google.com`, Microsoft 365 is `spf.protection.outlook.com`, SendGrid is `sendgrid.net`), `ip4`/`ip6` for your own servers, plus `useMx`/`useA` to authorise the domain's own MX or A records. The `policy` decides what receivers do with mail from anywhere else: 'fail' (-all, the production choice), 'softfail' (~all, for testing), 'neutral', or 'pass' (+all, which authorises the entire internet and should never be published). The reason to call this rather than write the string yourself: SPF is limited to ten DNS lookups when it is evaluated, and exceeding that is a PermError which receivers treat as the domain having no SPF at all. include, a, mx, exists and redirect each cost a lookup; ip4 and ip6 are free. Returns the record, the lookup count, whether either the lookup or 255-character limit is exceeded, warnings in plain language, and the DNS entry to publish. Use check_spf instead to read and validate the record a domain already publishes, and flatten_spf when an existing record is over the lookup limit and has to be reduced; use this to build a new record from scratch. Nothing is looked up or stored — this is computation only.",
+  "Build an SPF (Sender Policy Framework) record — the DNS TXT record that lists which servers may send mail for a domain. Pass the senders as `mechanisms`: `include` for a provider's own SPF (Google Workspace is `_spf.google.com`, Microsoft 365 is `spf.protection.outlook.com`, SendGrid is `sendgrid.net`), `ip4`/`ip6` for your own servers, plus `useMx`/`useA` to authorise the domain's own MX or A records. The `policy` decides what receivers do with mail from anywhere else: 'fail' (-all, the production choice), 'softfail' (~all, for testing), 'neutral', or 'pass' (+all, which authorises the entire internet and should never be published). SPF is limited to ten DNS-triggering terms during recursive evaluation. This pure builder counts direct mechanisms; include and redirect targets can add nested lookups, so validate the published record with check_spf before treating the count as final. Returns the record, direct lookup count, whether that direct count or the 255-character limit is exceeded, plain-language warnings, and the DNS entry to publish. Use check_spf to resolve and validate a live record, and flatten_spf only when an existing record is over the limit. Nothing is looked up or stored — this is computation only.",
   {
     mechanisms: z
       .array(
