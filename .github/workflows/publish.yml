@@ -8,6 +8,15 @@ on:
         required: true
         type: string
 
+# Publishing uses npm Trusted Publishing (OIDC), not a token. The account has 2FA
+# on, so a granular token only works when it is created with "bypass 2FA", and
+# npm is retiring that: account changes since Aug 2026, direct publishing from
+# Jan 2027. Three such tokens have already expired or been revoked under us — the
+# last one, intodns-mcp-ci, was revoked on 2026-08-04 and every publish after it
+# failed with a misleading `E404 PUT .../intodns-mcp`, not an auth error. OIDC has
+# nothing to expire. The trusted publisher is configured on npmjs.com under the
+# package's Settings and must name this repository, this workflow file and the
+# environment below (none).
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -21,9 +30,8 @@ jobs:
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
+      # Trusted publishing needs npm 11.5.1 or newer to mint the OIDC credential.
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm test
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
