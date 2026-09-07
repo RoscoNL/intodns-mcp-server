@@ -76,9 +76,15 @@ test("publishes a truthful, annotated MCP catalog", async () => {
   assert.equal(snapshot.annotations.destructiveHint, false);
   assert.equal(snapshot.annotations.idempotentHint, false);
 
+  // Cancelling writes, so it is not read-only, but it destroys nothing: a scan
+  // that already finished keeps its results and is left alone. It was announced
+  // as destructive, which is the one badge a directory renders in red and the
+  // one hint a client gates behind a confirmation prompt.
   const cancel = tools.find((tool) => tool.name === "cancel_deep_scan");
-  assert.equal(cancel.annotations.destructiveHint, true);
+  assert.equal(cancel.annotations.readOnlyHint, false);
+  assert.equal(cancel.annotations.destructiveHint, false);
   assert.equal(cancel.annotations.idempotentHint, true);
+  assert.doesNotMatch(cancel.description, /no side effects/i);
 
   assert.equal(callResult.structuredContent.domain, "example.com");
   assert.match(callResult.content[0].text, /example\.com/);

@@ -5,7 +5,7 @@ exports.registerTools = registerTools;
 exports.createServer = createServer;
 const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const zod_1 = require("zod");
-exports.VERSION = "1.10.2";
+exports.VERSION = "1.10.3";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${exports.VERSION}`;
@@ -91,12 +91,6 @@ const ADDITIVE_TOOL = {
 const ADDITIVE_IDEMPOTENT_TOOL = {
     ...ADDITIVE_TOOL,
     idempotentHint: true,
-};
-const DESTRUCTIVE_IDEMPOTENT_TOOL = {
-    readOnlyHint: false,
-    destructiveHint: true,
-    idempotentHint: true,
-    openWorldHint: true,
 };
 function buildUrl(base, path, params) {
     const normalizedBase = base.endsWith("/") ? base : `${base}/`;
@@ -284,7 +278,7 @@ function registerTools(server) {
         name: zod_1.z.string().optional().describe("Optional display name"),
     }, ADDITIVE_TOOL, async ({ domain, scanType, name }) => jsonResponse(await apiPost("/scan/deep", { domain, scanType, name })));
     server.tool("get_deep_scan_status", "Read-only status poll for a long-running Internet.nl deep scan. Returns scan progress (pending/running/finished), category scores, per-test results, and any failures. Requires a scanId returned by start_deep_scan; poll every 10-30s until status='finished'. Use after start_deep_scan; for fast single-vantage scans, prefer scan_domain. No auth, no side effects.", { scanId: zod_1.z.string().describe("Deep scan ID returned by start_deep_scan") }, READ_ONLY_TOOL, async ({ scanId }) => jsonResponse(await apiGet(`/scan/${encodeURIComponent(scanId)}`)));
-    server.tool("cancel_deep_scan", "Cancel an in-progress Internet.nl deep scan. Idempotent DELETE — safe to call even if scan already finished or never started (returns acknowledgement either way). Requires `scanId` returned by start_deep_scan. Use when the user changes their mind mid-scan or when polling get_deep_scan_status would otherwise time out. No auth, no side effects beyond freeing the upstream job slot.", { scanId: zod_1.z.string().describe("Deep scan ID returned by start_deep_scan") }, DESTRUCTIVE_IDEMPOTENT_TOOL, async ({ scanId }) => jsonResponse(await apiDelete(`/scan/${encodeURIComponent(scanId)}`)));
+    server.tool("cancel_deep_scan", "Cancel an in-progress Internet.nl deep scan. Marks the scan cancelled; the polling loop then withdraws the upstream Internet.nl batch, usually within ten seconds. Requires `scanId` returned by start_deep_scan. Nothing is deleted: a scan that already finished keeps its results and is left alone, so calling this twice is safe. An unknown or expired scanId returns 404. Use when the user changes their mind mid-scan or when polling get_deep_scan_status would otherwise time out. No auth.", { scanId: zod_1.z.string().describe("Deep scan ID returned by start_deep_scan") }, ADDITIVE_IDEMPOTENT_TOOL, async ({ scanId }) => jsonResponse(await apiDelete(`/scan/${encodeURIComponent(scanId)}`)));
     server.tool("lookup_dns", "Read-only DNS record lookup via DNS-over-HTTPS. Pass `type` for a single record type or `types` for an array; if both omitted, returns A records. Returns parsed answers with TTL, raw rdata, and DNSSEC AD bit. Use for arbitrary record queries; use validate_dnssec for full DNSSEC chain validation, or check_dns_propagation for multi-resolver consensus. No auth, no rate limits beyond upstream resolver.", {
         domain: domainSchema,
         type: dnsTypeSchema.optional().describe("Single DNS record type"),

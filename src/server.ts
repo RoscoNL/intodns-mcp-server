@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-export const VERSION = "1.10.2";
+export const VERSION = "1.10.3";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -104,13 +104,6 @@ const ADDITIVE_TOOL = {
 const ADDITIVE_IDEMPOTENT_TOOL = {
   ...ADDITIVE_TOOL,
   idempotentHint: true,
-} satisfies ToolAnnotations;
-
-const DESTRUCTIVE_IDEMPOTENT_TOOL = {
-  readOnlyHint: false,
-  destructiveHint: true,
-  idempotentHint: true,
-  openWorldHint: true,
 } satisfies ToolAnnotations;
 
 function buildUrl(base: string, path: string, params?: Record<string, string | number | boolean | undefined>): string {
@@ -371,9 +364,9 @@ server.tool(
 
 server.tool(
   "cancel_deep_scan",
-  "Cancel an in-progress Internet.nl deep scan. Idempotent DELETE — safe to call even if scan already finished or never started (returns acknowledgement either way). Requires `scanId` returned by start_deep_scan. Use when the user changes their mind mid-scan or when polling get_deep_scan_status would otherwise time out. No auth, no side effects beyond freeing the upstream job slot.",
+  "Cancel an in-progress Internet.nl deep scan. Marks the scan cancelled; the polling loop then withdraws the upstream Internet.nl batch, usually within ten seconds. Requires `scanId` returned by start_deep_scan. Nothing is deleted: a scan that already finished keeps its results and is left alone, so calling this twice is safe. An unknown or expired scanId returns 404. Use when the user changes their mind mid-scan or when polling get_deep_scan_status would otherwise time out. No auth.",
   { scanId: z.string().describe("Deep scan ID returned by start_deep_scan") },
-  DESTRUCTIVE_IDEMPOTENT_TOOL,
+  ADDITIVE_IDEMPOTENT_TOOL,
   async ({ scanId }) => jsonResponse(await apiDelete(`/scan/${encodeURIComponent(scanId)}`))
 );
 
