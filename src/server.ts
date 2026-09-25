@@ -467,7 +467,7 @@ server.tool(
 
 server.tool(
   "check_smtp_tls",
-  "Live check of every MX host: opens TCP 25, runs EHLO + STARTTLS, validates TLS certificate trust chain, hostname match, expiry window, advertised EHLO capabilities, plus PTR and forward-confirmed reverse DNS. Read-only — connects and quits without sending mail. Returns per-MX cipher/version, cert SANs, expiry days, FCrDNS verdict, and STARTTLS-required flag. Use to verify inbound mail TLS posture; pair with check_mta_sts for the policy layer. May be slower (10-30s) due to live SMTP handshakes. No auth.",
+  "Live check of every MX host: opens TCP 25, runs EHLO + STARTTLS, validates TLS certificate trust chain, hostname match, expiry window, advertised EHLO capabilities, plus PTR and forward-confirmed reverse DNS. Read-only — connects and quits without sending mail. Returns per-MX cipher/version, cert SANs, expiry days, FCrDNS verdict, and STARTTLS-required flag. Use to verify inbound mail TLS posture; pair with check_mta_sts for the policy layer. May be slower (10-30s) due to live SMTP handshakes. Measured from the IntoDNS.ai server: a host that does not answer there has startTlsSupported null (not measured), not false; do not report that as missing STARTTLS. No auth.",
   { domain: domainSchema },
   READ_ONLY_TOOL,
   async ({ domain }) => jsonResponse(await apiGet("/email/smtp-tls", { domain }))
