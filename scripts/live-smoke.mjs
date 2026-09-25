@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { assertCatalog } from "../tests/catalog-expectations.mjs";
 
 const client = new Client({ name: "intodns-live-smoke", version: "1" });
 const transport = new StdioClientTransport({
@@ -13,8 +14,7 @@ const transport = new StdioClientTransport({
 try {
   await client.connect(transport);
   const catalog = await client.listTools();
-  assert.equal(catalog.tools.length, 42);
-  assert.equal(catalog.tools.filter((tool) => tool.annotations).length, 42);
+  assertCatalog(catalog.tools);
 
   const calls = [
     ["get_health", {}],
