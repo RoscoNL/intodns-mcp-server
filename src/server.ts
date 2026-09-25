@@ -395,7 +395,7 @@ server.tool(
 
 server.tool(
   "check_dns_propagation",
-  "Compare DNS responses across the nine currently configured public and authoritative resolvers to detect propagation lag, missing answers, or inconsistent TTL/data values. Defaults to record type A and region 'all'. Returns every resolver response plus a propagation percentage and explicit inconsistency list. Use when records were just changed and you suspect staleness; for a single DNS-over-HTTPS lookup use lookup_dns instead. Read-only HTTP, no auth, and no destructive actions.",
+  "Compare DNS responses across the nine currently configured public and authoritative resolvers to detect propagation lag, missing answers, or differing record sets. Each resolver's answer is compared as a whole RRset (order, case of names and trailing dots ignored; TXT case kept; TTLs ignored, as caches count them down). Defaults to record type A and region 'all'. Returns every resolver response, how many resolvers were queried, answered and failed, and `percentage` = share of the answering resolvers that agree on the most common answer; that is agreement, not coverage, and a failed resolver was not measured. Use when records were just changed and you suspect staleness; for a single DNS-over-HTTPS lookup use lookup_dns instead. Read-only HTTP, no auth, and no destructive actions.",
   {
     domain: domainSchema,
     type: propagationTypeSchema.default("A").describe("DNS record type to check"),
@@ -483,7 +483,7 @@ server.tool(
 
 server.tool(
   "check_blacklist",
-  "Read-only query against the currently configured public DNSBL/RBL providers (roughly 60, with noisy providers explicitly disabled). Provide either `domain` to resolve and inspect its MX IPv4 addresses or an IPv4 `ip` for a direct check; at least one is required. Returns each provider's listed/clean result, severity, removal metadata, plus unavailable and disabled provider evidence so timeouts are not misreported as clean. Use for mail-server reputation triage; it is not a delisting service. No auth or destructive actions.",
+  "Read-only query against the currently configured public DNSBL/RBL providers (roughly 60, with noisy providers explicitly disabled). Provide either `domain` to resolve and inspect its MX IPv4 addresses or an IPv4 `ip` for a direct check; at least one is required. Returns each provider's listed/clean result, severity, removal metadata, plus unavailable and disabled provider evidence. A provider error code (e.g. Spamhaus 127.255.255.x when the query is refused), a timeout, or a list that does not answer its RFC 5782 test entry is listed under unavailableProviders: that provider's status is unknown, not clean. Domain-only lists (Spamhaus DBL, NordSpam DBL) are excluded from IP checks. Use for mail-server reputation triage; it is not a delisting service. No auth or destructive actions.",
   {
     domain: domainSchema.optional(),
     ip: z.ipv4().optional().describe("IPv4 address to check directly"),
