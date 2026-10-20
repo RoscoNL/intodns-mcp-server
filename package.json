@@ -42,7 +42,7 @@
   "author": "Cobytes B.V.",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "zod": "^4.3.5"
   },
   "devDependencies": {
