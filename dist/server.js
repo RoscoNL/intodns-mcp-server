@@ -309,7 +309,7 @@ function registerTools(server) {
     }, async ({ domain, scanType, name }) => jsonResponse(await apiPost("/scan/deep", { domain, scanType, name })));
     server.registerTool("get_deep_scan_status", {
         title: "Get deep scan status",
-        description: "Read-only status poll for a long-running Internet.nl deep scan. Returns the status (queued, registering, running, generating, done, cancelled or error), progress, category scores, per-test results, and any failures. Requires a scanId returned by start_deep_scan; poll every 10-30s until status is 'done', 'error' or 'cancelled'. Use after start_deep_scan; for fast single-vantage scans, prefer scan_domain. No auth, no side effects.",
+        description: "Read-only status poll for a long-running Internet.nl deep scan. Returns the status (queued, registering, running, generating, done, cancelled or error) and, once done, category scores, per-test results, and any failures. Requires a scanId returned by start_deep_scan; poll every 10-30s until status is 'done', 'error' or 'cancelled'. Use after start_deep_scan; for fast single-vantage scans, prefer scan_domain. No auth, no side effects.",
         inputSchema: { scanId: zod_1.z.string().describe("Deep scan ID returned by start_deep_scan") },
         annotations: READ_ONLY_TOOL,
     }, async ({ scanId }) => jsonResponse(await apiGet(`/scan/${encodeURIComponent(scanId)}`)));
