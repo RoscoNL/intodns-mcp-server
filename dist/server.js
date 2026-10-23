@@ -299,7 +299,7 @@ function registerTools(server) {
     });
     server.registerTool("start_deep_scan", {
         title: "Start deep scan",
-        description: "Start a long-running Internet.nl deep scan (typically 30-120s). Returns a `scanId` immediately; poll get_deep_scan_status until status='finished'. Read-only — no domain mutation. Internet.nl runs an exhaustive standards-compliance audit (IPv6, DNSSEC, modern TLS, RPKI, mail authentication) used by EU governments. Use when scan_domain output is not strict enough for compliance reporting, or when the user asks for an Internet.nl-grade audit. For sub-10s answers, use scan_domain. To abort an in-progress scan, call cancel_deep_scan. No auth.",
+        description: "Start a long-running Internet.nl deep scan. Internet.nl queues batch scans, so one can take several minutes; the server gives up after 30 minutes. Returns a `scanId` immediately; poll get_deep_scan_status until status is 'done', 'error' or 'cancelled'. Every call starts a new scan, so do not repeat a call that succeeded. Does not modify the domain: it only reads its public DNS, web and mail endpoints. Internet.nl runs an exhaustive standards-compliance audit (IPv6, DNSSEC, modern TLS, RPKI, mail authentication) used by EU governments. Use when scan_domain output is not strict enough for compliance reporting, or when the user asks for an Internet.nl-grade audit. For sub-10s answers, use scan_domain. To abort an in-progress scan, call cancel_deep_scan. No auth.",
         inputSchema: {
             domain: domainSchema,
             scanType: zod_1.z.enum(["web", "mail", "both"]).default("both").describe("Deep scan type"),
@@ -309,7 +309,7 @@ function registerTools(server) {
     }, async ({ domain, scanType, name }) => jsonResponse(await apiPost("/scan/deep", { domain, scanType, name })));
     server.registerTool("get_deep_scan_status", {
         title: "Get deep scan status",
-        description: "Read-only status poll for a long-running Internet.nl deep scan. Returns scan progress (pending/running/finished), category scores, per-test results, and any failures. Requires a scanId returned by start_deep_scan; poll every 10-30s until status='finished'. Use after start_deep_scan; for fast single-vantage scans, prefer scan_domain. No auth, no side effects.",
+        description: "Read-only status poll for a long-running Internet.nl deep scan. Returns the status (queued, registering, running, generating, done, cancelled or error), progress, category scores, per-test results, and any failures. Requires a scanId returned by start_deep_scan; poll every 10-30s until status is 'done', 'error' or 'cancelled'. Use after start_deep_scan; for fast single-vantage scans, prefer scan_domain. No auth, no side effects.",
         inputSchema: { scanId: zod_1.z.string().describe("Deep scan ID returned by start_deep_scan") },
         annotations: READ_ONLY_TOOL,
     }, async ({ scanId }) => jsonResponse(await apiGet(`/scan/${encodeURIComponent(scanId)}`)));
