@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-export const VERSION = "1.10.3";
+export const VERSION = "1.11.0";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -268,36 +268,45 @@ function textResponse(text: string) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function registerTools(server: McpServer): void {
 
-server.tool(
+server.registerTool(
   "scan_domain",
-  "Run the fast IntoDNS.ai DNS and email security scan (~3-8s). Returns a letter grade A+ to F, numeric score 0-100, structured issue list, prioritised recommendations, full DNS/email/web/security result sections, and canonical citation URLs. Read-only — no domain mutation, no destructive side effects. The default tool for agent-visible scan evidence; use get_everything_report for a deeper single-shot report including web/blacklist/sender data, or start_deep_scan for slower Internet.nl-grade analysis. After running, use explain_issue or generate_dns_fix on any returned issue. No auth.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Quick domain security scan",
+    description: "Run the fast IntoDNS.ai DNS and email security scan (~3-8s). Returns a letter grade A+ to F, numeric score 0-100, structured issue list, prioritised recommendations, full DNS/email/web/security result sections, and canonical citation URLs. Read-only — no domain mutation, no destructive side effects. The default tool for agent-visible scan evidence; use get_everything_report for a deeper single-shot report including web/blacklist/sender data, or start_deep_scan for slower Internet.nl-grade analysis. After running, use explain_issue or generate_dns_fix on any returned issue. No auth.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/scan/quick", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "nis2_quickscan",
-  "Compute a NIS2 Article 21.2 readiness score for a domain by mapping the IntoDNS quickscan onto the ten NIS2 measures. Returns a 0-100 weighted total, per-measure status (Article 21.2 a-j), evidence rows, critical gaps, and concrete fix suggestions. The score reflects only the DNS and email layer of NIS2 — full NIS2 compliance also requires audit of web applications, supply chain, organisational processes, and training. Use when the user asks about NIS2 compliance, NIS2 readiness, NIS2 Article 21.2, cyber-hygiene compliance, or related EU-NIS regulation checks for a domain.",
   {
-    domain: domainSchema,
-    lang: z
-      .enum(["en", "nl"])
-      .default("en")
-      .describe("Language for the standard caveat text shown alongside the score."),
+    title: "NIS2 readiness quickscan",
+    description: "Compute a NIS2 Article 21.2 readiness score for a domain by mapping the IntoDNS quickscan onto the ten NIS2 measures. Returns a 0-100 weighted total, per-measure status (Article 21.2 a-j), evidence rows, critical gaps, and concrete fix suggestions. The score reflects only the DNS and email layer of NIS2 — full NIS2 compliance also requires audit of web applications, supply chain, organisational processes, and training. Use when the user asks about NIS2 compliance, NIS2 readiness, NIS2 Article 21.2, cyber-hygiene compliance, or related EU-NIS regulation checks for a domain.",
+    inputSchema: {
+      domain: domainSchema,
+      lang: z
+        .enum(["en", "nl"])
+        .default("en")
+        .describe("Language for the standard caveat text shown alongside the score."),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ domain, lang }) => jsonResponse(await apiGet("/scan/nis2", { domain, lang }))
 );
 
-server.tool(
+server.registerTool(
   "get_everything_report",
-  "Generate the complete live IntoDNS.ai report covering DNS, email authentication, web/HTTPS, blacklist reputation, sender requirements, and canonical citation URLs in a single call. Read-only, no domain mutation. ~5-15s latency depending on backend cache state. Use when the user asks for everything, the full picture, or a deep current-state summary; use scan_domain for a faster default scan, or create_report_snapshot when the result must remain immutable for audit/ticket use. No auth, no side effects.",
   {
-    domain: domainSchema,
-    format: z.enum(["json", "markdown"]).default("json").describe("Return JSON data or LLM-ready Markdown"),
+    title: "Full domain report",
+    description: "Generate the complete live IntoDNS.ai report covering DNS, email authentication, web/HTTPS, blacklist reputation, sender requirements, and canonical citation URLs in a single call. Read-only, no domain mutation. ~5-15s latency depending on backend cache state. Use when the user asks for everything, the full picture, or a deep current-state summary; use scan_domain for a faster default scan, or create_report_snapshot when the result must remain immutable for audit/ticket use. No auth, no side effects.",
+    inputSchema: {
+      domain: domainSchema,
+      format: z.enum(["json", "markdown"]).default("json").describe("Return JSON data or LLM-ready Markdown"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ domain, format }) => {
     if (format === "markdown") {
       return textResponse(await siteGet(`/api/report/everything?domain=${encodeURIComponent(domain)}&format=markdown`));
@@ -307,14 +316,17 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   "create_report_snapshot",
-  "Create an immutable evidence snapshot of the current Everything Report for a domain. Returns a snapshot ID, ISO timestamp, SHA-256 content hash, and stable bookmarkable URLs for both JSON and Markdown renderings of the report. Snapshots are write-once and resolve to the same evidence months/years later — useful for tickets, audit trails, NIS2/ISO compliance evidence, and LLM citations that should not drift. A canonical POST creates one snapshot per call (additive and not idempotent); use get_report_snapshot to read it back. Use this instead of get_everything_report when the result must remain stable.",
   {
-    domain: domainSchema,
-    format: z.enum(["json", "markdown"]).default("json").describe("Return the created snapshot as JSON or Markdown"),
+    title: "Create report snapshot",
+    description: "Create an immutable evidence snapshot of the current Everything Report for a domain. Returns a snapshot ID, ISO timestamp, SHA-256 content hash, and stable bookmarkable URLs for both JSON and Markdown renderings of the report. Snapshots are write-once and resolve to the same evidence months/years later — useful for tickets, audit trails, NIS2/ISO compliance evidence, and LLM citations that should not drift. A canonical POST creates one snapshot per call (additive and not idempotent); use get_report_snapshot to read it back. Use this instead of get_everything_report when the result must remain stable.",
+    inputSchema: {
+      domain: domainSchema,
+      format: z.enum(["json", "markdown"]).default("json").describe("Return the created snapshot as JSON or Markdown"),
+    },
+    annotations: ADDITIVE_TOOL,
   },
-  ADDITIVE_TOOL,
   async ({ domain, format }) => {
     if (format === "markdown") {
       return textResponse(await sitePost(`/api/report/snapshot?domain=${encodeURIComponent(domain)}&format=markdown`));
@@ -324,14 +336,17 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   "get_report_snapshot",
-  "Read a previously created IntoDNS.ai Everything Report evidence snapshot by snapshot ID. Read-only GET — returns the immutable JSON report exactly as it was at snapshot creation, with the original SHA-256 content hash and timestamp. Requires `snapshotId` from create_report_snapshot. Use to verify or re-read an audit-trail evidence record without re-running a live scan; use get_everything_report for current live data instead. No auth, fully idempotent.",
   {
-    snapshotId: z.string().describe("Snapshot ID returned by create_report_snapshot"),
-    format: z.enum(["json", "markdown"]).default("json").describe("Return JSON data or LLM-ready Markdown"),
+    title: "Get report snapshot",
+    description: "Read a previously created IntoDNS.ai Everything Report evidence snapshot by snapshot ID. Read-only GET — returns the immutable JSON report exactly as it was at snapshot creation, with the original SHA-256 content hash and timestamp. Requires `snapshotId` from create_report_snapshot. Use to verify or re-read an audit-trail evidence record without re-running a live scan; use get_everything_report for current live data instead. No auth, fully idempotent.",
+    inputSchema: {
+      snapshotId: z.string().describe("Snapshot ID returned by create_report_snapshot"),
+      format: z.enum(["json", "markdown"]).default("json").describe("Return JSON data or LLM-ready Markdown"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ snapshotId, format }) => {
     const encodedId = encodeURIComponent(snapshotId);
     if (format === "markdown") {
@@ -342,153 +357,201 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   "start_deep_scan",
-  "Start a long-running Internet.nl deep scan (typically 30-120s). Returns a `scanId` immediately; poll get_deep_scan_status until status='finished'. Read-only — no domain mutation. Internet.nl runs an exhaustive standards-compliance audit (IPv6, DNSSEC, modern TLS, RPKI, mail authentication) used by EU governments. Use when scan_domain output is not strict enough for compliance reporting, or when the user asks for an Internet.nl-grade audit. For sub-10s answers, use scan_domain. To abort an in-progress scan, call cancel_deep_scan. No auth.",
   {
-    domain: domainSchema,
-    scanType: z.enum(["web", "mail", "both"]).default("both").describe("Deep scan type"),
-    name: z.string().optional().describe("Optional display name"),
+    title: "Start deep scan",
+    description: "Start a long-running Internet.nl deep scan (typically 30-120s). Returns a `scanId` immediately; poll get_deep_scan_status until status='finished'. Read-only — no domain mutation. Internet.nl runs an exhaustive standards-compliance audit (IPv6, DNSSEC, modern TLS, RPKI, mail authentication) used by EU governments. Use when scan_domain output is not strict enough for compliance reporting, or when the user asks for an Internet.nl-grade audit. For sub-10s answers, use scan_domain. To abort an in-progress scan, call cancel_deep_scan. No auth.",
+    inputSchema: {
+      domain: domainSchema,
+      scanType: z.enum(["web", "mail", "both"]).default("both").describe("Deep scan type"),
+      name: z.string().optional().describe("Optional display name"),
+    },
+    annotations: ADDITIVE_TOOL,
   },
-  ADDITIVE_TOOL,
   async ({ domain, scanType, name }) => jsonResponse(await apiPost("/scan/deep", { domain, scanType, name }))
 );
 
-server.tool(
+server.registerTool(
   "get_deep_scan_status",
-  "Read-only status poll for a long-running Internet.nl deep scan. Returns scan progress (pending/running/finished), category scores, per-test results, and any failures. Requires a scanId returned by start_deep_scan; poll every 10-30s until status='finished'. Use after start_deep_scan; for fast single-vantage scans, prefer scan_domain. No auth, no side effects.",
-  { scanId: z.string().describe("Deep scan ID returned by start_deep_scan") },
-  READ_ONLY_TOOL,
+  {
+    title: "Get deep scan status",
+    description: "Read-only status poll for a long-running Internet.nl deep scan. Returns scan progress (pending/running/finished), category scores, per-test results, and any failures. Requires a scanId returned by start_deep_scan; poll every 10-30s until status='finished'. Use after start_deep_scan; for fast single-vantage scans, prefer scan_domain. No auth, no side effects.",
+    inputSchema: { scanId: z.string().describe("Deep scan ID returned by start_deep_scan") },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ scanId }) => jsonResponse(await apiGet(`/scan/${encodeURIComponent(scanId)}`))
 );
 
-server.tool(
+server.registerTool(
   "cancel_deep_scan",
-  "Cancel an in-progress Internet.nl deep scan. Marks the scan cancelled; the polling loop then withdraws the upstream Internet.nl batch, usually within ten seconds. Requires `scanId` returned by start_deep_scan. Nothing is deleted: a scan that already finished keeps its results and is left alone, so calling this twice is safe. An unknown or expired scanId returns 404. Use when the user changes their mind mid-scan or when polling get_deep_scan_status would otherwise time out. No auth.",
-  { scanId: z.string().describe("Deep scan ID returned by start_deep_scan") },
-  ADDITIVE_IDEMPOTENT_TOOL,
+  {
+    title: "Cancel deep scan",
+    description: "Cancel an in-progress Internet.nl deep scan. Marks the scan cancelled; the polling loop then withdraws the upstream Internet.nl batch, usually within ten seconds. Requires `scanId` returned by start_deep_scan. Nothing is deleted: a scan that already finished keeps its results and is left alone, so calling this twice is safe. An unknown or expired scanId returns 404. Use when the user changes their mind mid-scan or when polling get_deep_scan_status would otherwise time out. No auth.",
+    inputSchema: { scanId: z.string().describe("Deep scan ID returned by start_deep_scan") },
+    annotations: ADDITIVE_IDEMPOTENT_TOOL,
+  },
   async ({ scanId }) => jsonResponse(await apiDelete(`/scan/${encodeURIComponent(scanId)}`))
 );
 
-server.tool(
+server.registerTool(
   "lookup_dns",
-  "Read-only DNS record lookup via DNS-over-HTTPS. Pass `type` for a single record type or `types` for an array; if both omitted, returns A records. Returns parsed answers with TTL, raw rdata, and DNSSEC AD bit. Use for arbitrary record queries; use validate_dnssec for full DNSSEC chain validation, or check_dns_propagation for multi-resolver consensus. No auth, no rate limits beyond upstream resolver.",
   {
-    domain: domainSchema,
-    type: dnsTypeSchema.optional().describe("Single DNS record type"),
-    types: z.array(dnsTypeSchema).optional().describe("Multiple DNS record types"),
+    title: "DNS record lookup",
+    description: "Read-only DNS record lookup via DNS-over-HTTPS. Pass `type` for a single record type or `types` for an array; if both omitted, returns A records. Returns parsed answers with TTL, raw rdata, and DNSSEC AD bit. Use for arbitrary record queries; use validate_dnssec for full DNSSEC chain validation, or check_dns_propagation for multi-resolver consensus. No auth, no rate limits beyond upstream resolver.",
+    inputSchema: {
+      domain: domainSchema,
+      type: dnsTypeSchema.optional().describe("Single DNS record type"),
+      types: z.array(dnsTypeSchema).optional().describe("Multiple DNS record types"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ domain, type, types }) => {
     const selectedTypes = types?.length ? types.join(",") : type;
     return jsonResponse(await apiGet("/dns/lookup", { domain, types: selectedTypes }));
   }
 );
 
-server.tool(
+server.registerTool(
   "validate_dnssec",
-  "Read-only DNSSEC chain validation. Walks the DS/DNSKEY chain from root, checks signatures, algorithm strength, key rollover state, and reports any broken links or unsigned zones. Returns chain steps, algorithm grades, and a boolean `valid`. Use when a domain claims DNSSEC; use lookup_dns(type='DNSKEY') for raw key data only. Single HTTP GET, no auth, no destructive actions.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Validate DNSSEC chain",
+    description: "Read-only DNSSEC chain validation. Walks the DS/DNSKEY chain from root, checks signatures, algorithm strength, key rollover state, and reports any broken links or unsigned zones. Returns chain steps, algorithm grades, and a boolean `valid`. Use when a domain claims DNSSEC; use lookup_dns(type='DNSKEY') for raw key data only. Single HTTP GET, no auth, no destructive actions.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/dns/dnssec", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "check_dns_propagation",
-  "Compare DNS responses across the nine currently configured public and authoritative resolvers to detect propagation lag, missing answers, or differing record sets. Each resolver's answer is compared as a whole RRset (order, case of names and trailing dots ignored; TXT case kept; TTLs ignored, as caches count them down). Defaults to record type A and region 'all'. Returns every resolver response, how many resolvers were queried, answered and failed, and `percentage` = share of the answering resolvers that agree on the most common answer; that is agreement, not coverage, and a failed resolver was not measured. Use when records were just changed and you suspect staleness; for a single DNS-over-HTTPS lookup use lookup_dns instead. Read-only HTTP, no auth, and no destructive actions.",
   {
-    domain: domainSchema,
-    type: propagationTypeSchema.default("A").describe("DNS record type to check"),
-    region: z.enum(["all", "global", "europe", "americas"]).default("all").describe("Resolver region"),
+    title: "Check DNS propagation",
+    description: "Compare DNS responses across the nine currently configured public and authoritative resolvers to detect propagation lag, missing answers, or differing record sets. Each resolver's answer is compared as a whole RRset (order, case of names and trailing dots ignored; TXT case kept; TTLs ignored, as caches count them down). Defaults to record type A and region 'all'. Returns every resolver response, how many resolvers were queried, answered and failed, and `percentage` = share of the answering resolvers that agree on the most common answer; that is agreement, not coverage, and a failed resolver was not measured. Use when records were just changed and you suspect staleness; for a single DNS-over-HTTPS lookup use lookup_dns instead. Read-only HTTP, no auth, and no destructive actions.",
+    inputSchema: {
+      domain: domainSchema,
+      type: propagationTypeSchema.default("A").describe("DNS record type to check"),
+      region: z.enum(["all", "global", "europe", "americas"]).default("all").describe("Resolver region"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ domain, type, region }) => jsonResponse(await apiGet("/dns/propagation", { domain, type, region }))
 );
 
-server.tool(
+server.registerTool(
   "check_tlsa_dane",
-  "Read-only TLSA/DANE DNS record check. With no port, resolves MX hosts and validates their `_25._tcp` TLSA tuple syntax; with an explicit port, queries `_<port>._<protocol>.<domain>`. Returns parsed usage, selector, matching type, certificate data, syntax errors, and best-practice advisories. It does not fetch or cryptographically match the live service certificate, so pair it with check_smtp_tls for SMTP certificate evidence. Use before publishing DANE records or troubleshooting DANE handover. No auth or destructive actions.",
   {
-    domain: domainSchema,
-    port: z.number().int().min(1).max(65535).optional().describe("Port to check, defaults to 25"),
-    protocol: z.enum(["tcp", "udp"]).default("tcp").describe("Transport protocol"),
+    title: "Check TLSA/DANE records",
+    description: "Read-only TLSA/DANE DNS record check. With no port, resolves MX hosts and validates their `_25._tcp` TLSA tuple syntax; with an explicit port, queries `_<port>._<protocol>.<domain>`. Returns parsed usage, selector, matching type, certificate data, syntax errors, and best-practice advisories. It does not fetch or cryptographically match the live service certificate, so pair it with check_smtp_tls for SMTP certificate evidence. Use before publishing DANE records or troubleshooting DANE handover. No auth or destructive actions.",
+    inputSchema: {
+      domain: domainSchema,
+      port: z.number().int().min(1).max(65535).optional().describe("Port to check, defaults to 25"),
+      protocol: z.enum(["tcp", "udp"]).default("tcp").describe("Transport protocol"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ domain, port, protocol }) => jsonResponse(await apiGet("/dns/tlsa", { domain, port, protocol }))
 );
 
-server.tool(
+server.registerTool(
   "check_spf",
-  "Read-only SPF parse and validation for a domain. Recursively walks include/redirect mechanisms to build the full lookup graph, counts DNS lookups against the RFC-7208 10-lookup limit, and returns flattening guidance when the count is close to or over the limit. Returns parsed mechanisms, lookup graph, total count, qualifier (~all / -all / +all), and warnings. Use for SPF auditing or before adding new include: senders; use check_email_security for the broader SPF+DKIM+DMARC overview. No auth, no side effects.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Check SPF record",
+    description: "Read-only SPF parse and validation for a domain. Recursively walks include/redirect mechanisms to build the full lookup graph, counts DNS lookups against the RFC-7208 10-lookup limit, and returns flattening guidance when the count is close to or over the limit. Returns parsed mechanisms, lookup graph, total count, qualifier (~all / -all / +all), and warnings. Use for SPF auditing or before adding new include: senders; use check_email_security for the broader SPF+DKIM+DMARC overview. No auth, no side effects.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/email/spf", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "flatten_spf",
-  "Read-only SPF flattening for a domain. Resolves the full include/a/mx/redirect graph to literal ip4/ip6 addresses and returns a single flattened SPF record that fits under the RFC-7208 10-lookup limit, plus lookup counts before/after, IP count, record length, whether it must be split across multiple records, and a maintenance warning. Use when a domain hits 'too many DNS lookups' (PermError) and removing unused includes is not enough; run check_spf first to see the lookup graph and whether flattening is actually needed. Flattened records are high-maintenance — they break when a provider rotates IPs — so treat the output as a last resort to re-verify periodically. No auth, no side effects.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Flatten SPF record",
+    description: "Read-only SPF flattening for a domain. Resolves the full include/a/mx/redirect graph to literal ip4/ip6 addresses and returns a single flattened SPF record that fits under the RFC-7208 10-lookup limit, plus lookup counts before/after, IP count, record length, whether it must be split across multiple records, and a maintenance warning. Use when a domain hits 'too many DNS lookups' (PermError) and removing unused includes is not enough; run check_spf first to see the lookup graph and whether flattening is actually needed. Flattened records are high-maintenance — they break when a provider rotates IPs — so treat the output as a last resort to re-verify periodically. No auth, no side effects.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/spf/flatten", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "discover_dkim",
-  "Read-only DKIM check for a domain. Without `selector`, heuristically queries 50 common selectors and explicitly reports that a miss is inconclusive because DKIM has no enumeration protocol. With `selector`, performs one authoritative exact lookup for a selector obtained from a DKIM-Signature header or mail provider. Returns discovery method, coverage note, parsed key tags, public-key strength, and warnings. Use exact mode whenever the selector is known; use check_email_security for the broader SPF/DKIM/DMARC overview. No auth or destructive actions.",
-  { domain: domainSchema, selector: dkimSelectorSchema.optional() },
-  READ_ONLY_TOOL,
+  {
+    title: "Discover DKIM selectors",
+    description: "Read-only DKIM check for a domain. Without `selector`, heuristically queries 50 common selectors and explicitly reports that a miss is inconclusive because DKIM has no enumeration protocol. With `selector`, performs one authoritative exact lookup for a selector obtained from a DKIM-Signature header or mail provider. Returns discovery method, coverage note, parsed key tags, public-key strength, and warnings. Use exact mode whenever the selector is known; use check_email_security for the broader SPF/DKIM/DMARC overview. No auth or destructive actions.",
+    inputSchema: { domain: domainSchema, selector: dkimSelectorSchema.optional() },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain, selector }) => jsonResponse(await apiGet("/email/dkim", { domain, selector }))
 );
 
-server.tool(
+server.registerTool(
   "check_dmarc",
-  "Read-only fetch and parse of the _dmarc TXT record. Returns parsed tag map (p, sp, rua, ruf, adkim, aspf, pct, fo), policy strength assessment, alignment mode, and warnings (missing rua, p=none, weak alignment, multiple records). Use for DMARC policy review; use check_sender_requirements for combined Google/Yahoo SPF+DKIM+DMARC pass/fail verdict. Single GET, no auth, no side effects.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Check DMARC record",
+    description: "Read-only fetch and parse of the _dmarc TXT record. Returns parsed tag map (p, sp, rua, ruf, adkim, aspf, pct, fo), policy strength assessment, alignment mode, and warnings (missing rua, p=none, weak alignment, multiple records). Use for DMARC policy review; use check_sender_requirements for combined Google/Yahoo SPF+DKIM+DMARC pass/fail verdict. Single GET, no auth, no side effects.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/email/dmarc", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "check_bimi",
-  "Read-only BIMI readiness check. Parses the `default._bimi` TXT record, safely fetches the referenced HTTPS SVG, and parses basic metadata from an optional VMC/CMC authority certificate. Returns record syntax, URL reachability/content type, certificate subject/issuer/validity dates, and explicit issues. It does not certify SVG Tiny PS profile compliance, validate the full mark-certificate trust chain, verify trademark ownership, or guarantee logo display by any mailbox provider. Use for a technical preflight before a formal BIMI/VMC review. No auth or destructive actions.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Check BIMI readiness",
+    description: "Read-only BIMI readiness check. Parses the `default._bimi` TXT record, safely fetches the referenced HTTPS SVG, and parses basic metadata from an optional VMC/CMC authority certificate. Returns record syntax, URL reachability/content type, certificate subject/issuer/validity dates, and explicit issues. It does not certify SVG Tiny PS profile compliance, validate the full mark-certificate trust chain, verify trademark ownership, or guarantee logo display by any mailbox provider. Use for a technical preflight before a formal BIMI/VMC review. No auth or destructive actions.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/email/bimi", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "check_mta_sts",
-  "Read-only check of MTA-STS: TXT record at _mta-sts.<domain> plus the HTTPS policy file at mta-sts.<domain>/.well-known/mta-sts.txt. Returns parsed policy (mode: enforce/testing/none, mx allowlist, max_age), TLS certificate validity for the policy host, and consistency warnings between DNS and HTTPS. Use to verify enforced TLS for inbound mail; pair with check_smtp_tls for live STARTTLS validation. No auth, DNS + HTTPS GET only.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Check MTA-STS",
+    description: "Read-only check of MTA-STS: TXT record at _mta-sts.<domain> plus the HTTPS policy file at mta-sts.<domain>/.well-known/mta-sts.txt. Returns parsed policy (mode: enforce/testing/none, mx allowlist, max_age), TLS certificate validity for the policy host, and consistency warnings between DNS and HTTPS. Use to verify enforced TLS for inbound mail; pair with check_smtp_tls for live STARTTLS validation. No auth, DNS + HTTPS GET only.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/email/mta-sts", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "check_smtp_tls",
-  "Live check of the first 4 MX hosts in priority order (hosts beyond 4 are not tested): opens TCP 25, runs EHLO + STARTTLS, validates TLS certificate trust chain, hostname match, expiry window, advertised EHLO capabilities, plus PTR and forward-confirmed reverse DNS. Read-only — connects and quits without sending mail. Returns per-MX TLS protocol version, certificate subject/issuer/SANs/validity/SHA-256 fingerprint, expiry days, and FCrDNS details. Use to verify inbound mail TLS posture; pair with check_mta_sts for the policy layer. May be slower (10-30s) due to live SMTP handshakes. Measured from the IntoDNS.ai server: a host that does not answer there has startTlsSupported null (not measured), not false; do not report that as missing STARTTLS. No auth.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Check mail server STARTTLS",
+    description: "Live check of the first 4 MX hosts in priority order (hosts beyond 4 are not tested): opens TCP 25, runs EHLO + STARTTLS, validates TLS certificate trust chain, hostname match, expiry window, advertised EHLO capabilities, plus PTR and forward-confirmed reverse DNS. Read-only — connects and quits without sending mail. Returns per-MX TLS protocol version, certificate subject/issuer/SANs/validity/SHA-256 fingerprint, expiry days, and FCrDNS details. Use to verify inbound mail TLS posture; pair with check_mta_sts for the policy layer. May be slower (10-30s) due to live SMTP handshakes. Measured from the IntoDNS.ai server: a host that does not answer there has startTlsSupported null (not measured), not false; do not report that as missing STARTTLS. No auth.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/email/smtp-tls", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "check_fcrdns",
-  "Read-only FCrDNS (Forward-Confirmed Reverse DNS) audit for every IP that backs the domain's MX records. For each IP: looks up PTR record, then resolves that PTR's hostname back to A/AAAA records to confirm the round-trip. Returns per-IP PTR value, forward-resolution result, match verdict, and warnings (missing PTR, mismatched forward, generic ISP reverse). Use for mail deliverability audits, SpamExperts-style cluster checks, and any 'why is our mail being rejected' debugging; pair with check_blacklist for reputation signals. No auth.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Check forward-confirmed reverse DNS",
+    description: "Read-only FCrDNS (Forward-Confirmed Reverse DNS) audit for every IP that backs the domain's MX records. For each IP: looks up PTR record, then resolves that PTR's hostname back to A/AAAA records to confirm the round-trip. Returns per-IP PTR value, forward-resolution result, match verdict, and warnings (missing PTR, mismatched forward, generic ISP reverse). Use for mail deliverability audits, SpamExperts-style cluster checks, and any 'why is our mail being rejected' debugging; pair with check_blacklist for reputation signals. No auth.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/email/fcrdns", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "check_blacklist",
-  "Read-only query against the configured public DNSBL/RBL providers; the response lists which ones answered, which could not be measured and which are disabled. Provide either `domain` to resolve and inspect its MX IPv4 addresses or an IPv4 `ip` for a direct check; at least one is required. Returns each provider's listed/clean result, severity, removal metadata, plus unavailable and disabled provider evidence. A provider error code (e.g. Spamhaus 127.255.255.x when the query is refused), a timeout, or a list that does not answer its RFC 5782 test entry is listed under unavailableProviders: that provider's status is unknown, not clean. Domain-only lists (Spamhaus DBL, NordSpam DBL) and Validity's reputation-score zone (score.senderscore.com, a score rather than a listing) are excluded from IP checks. Use for mail-server reputation triage; it is not a delisting service. No auth or destructive actions.",
   {
-    domain: domainSchema.optional(),
-    ip: z.ipv4().optional().describe("IPv4 address to check directly"),
+    title: "Check DNS blacklists",
+    description: "Read-only query against the configured public DNSBL/RBL providers; the response lists which ones answered, which could not be measured and which are disabled. Provide either `domain` to resolve and inspect its MX IPv4 addresses or an IPv4 `ip` for a direct check; at least one is required. Returns each provider's listed/clean result, severity, removal metadata, plus unavailable and disabled provider evidence. A provider error code (e.g. Spamhaus 127.255.255.x when the query is refused), a timeout, or a list that does not answer its RFC 5782 test entry is listed under unavailableProviders: that provider's status is unknown, not clean. Domain-only lists (Spamhaus DBL, NordSpam DBL) and Validity's reputation-score zone (score.senderscore.com, a score rather than a listing) are excluded from IP checks. Use for mail-server reputation triage; it is not a delisting service. No auth or destructive actions.",
+    inputSchema: {
+      domain: domainSchema.optional(),
+      ip: z.ipv4().optional().describe("IPv4 address to check directly"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ domain, ip }) => {
     if (!domain && !ip) {
       throw new Error("Provide either domain or ip");
@@ -497,138 +560,183 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   "check_sender_requirements",
-  "Read-only domain-side preflight against Google/Yahoo bulk-sender requirements. Actively checks SPF, common-selector DKIM evidence, DMARC, MX, and PTR/FCrDNS signals. TLS use, one-click unsubscribe, complaint rate, and From-header behavior require a real sent message/provider telemetry and are returned as informational follow-up items, not false passes. Returns per-requirement pass/fail/warning/info plus an explicitly limited readiness summary. Use before a campaign; use analyze_raw_email or create_email_test to verify message-level requirements. Single GET, no auth.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Check Google/Yahoo sender requirements",
+    description: "Read-only domain-side preflight against Google/Yahoo bulk-sender requirements. Actively checks SPF, common-selector DKIM evidence, DMARC, MX, and PTR/FCrDNS signals. TLS use, one-click unsubscribe, complaint rate, and From-header behavior require a real sent message/provider telemetry and are returned as informational follow-up items, not false passes. Returns per-requirement pass/fail/warning/info plus an explicitly limited readiness summary. Use before a campaign; use analyze_raw_email or create_email_test to verify message-level requirements. Single GET, no auth.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/email/sender-requirements", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "check_email_security",
-  "Read-only combined email-security check covering SPF parse, DKIM selector discovery, DMARC policy validation, MX IP blacklist status across major feeds, and an aggregated 0-100 email-security score with prioritised issue list. Single call replaces sequential check_spf + discover_dkim + check_dmarc + check_blacklist for the typical case. Use for one-shot email security overview; use check_sender_requirements specifically for Google/Yahoo bulk-sender compliance, or the individual check_* tools when you need only one signal. No auth, ~3-8s.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Full email security check",
+    description: "Read-only combined email-security check covering SPF parse, DKIM selector discovery, DMARC policy validation, MX IP blacklist status across major feeds, and an aggregated 0-100 email-security score with prioritised issue list. Single call replaces sequential check_spf + discover_dkim + check_dmarc + check_blacklist for the typical case. Use for one-shot email security overview; use check_sender_requirements specifically for Google/Yahoo bulk-sender compliance, or the individual check_* tools when you need only one signal. No auth, ~3-8s.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/email/check", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "create_email_test",
-  "Create a new IntoDNS.ai inbound email-test session. Returns a unique single-use test email address (valid 60 minutes) and a `testId` used by get_email_test or poll_email_test. This is an additive, non-idempotent POST: every call creates a fresh session but never modifies prior sessions. `language` controls result text (en/nl/de/fr, default en). Use to debug an outbound message's SPF/DKIM/DMARC, headers, and spam triggers; after sending, call poll_email_test. No auth.",
-  { language: z.enum(["en", "nl", "de", "fr"]).default("en").describe("Result language") },
-  ADDITIVE_TOOL,
+  {
+    title: "Create email test",
+    description: "Create a new IntoDNS.ai inbound email-test session. Returns a unique single-use test email address (valid 60 minutes) and a `testId` used by get_email_test or poll_email_test. This is an additive, non-idempotent POST: every call creates a fresh session but never modifies prior sessions. `language` controls result text (en/nl/de/fr, default en). Use to debug an outbound message's SPF/DKIM/DMARC, headers, and spam triggers; after sending, call poll_email_test. No auth.",
+    inputSchema: { language: z.enum(["en", "nl", "de", "fr"]).default("en").describe("Result language") },
+    annotations: ADDITIVE_TOOL,
+  },
   async ({ language }) => jsonResponse(await apiPost("/email-test/create", { language }))
 );
 
-server.tool(
+server.registerTool(
   "get_email_test",
-  "Read-only status read for an email-test session. Returns 'pending' until a test email arrives at the unique address returned by create_email_test, then full SPF/DKIM/DMARC/headers/spam-score result once processed. Requires `testId` from create_email_test. Use after sending a test message to that address; for explicit processing of just-arrived mail use poll_email_test instead. Idempotent GET, no auth.",
-  { testId: z.string().describe("Email test ID returned by create_email_test") },
-  READ_ONLY_TOOL,
+  {
+    title: "Get email test status",
+    description: "Read-only status read for an email-test session. Returns 'pending' until a test email arrives at the unique address returned by create_email_test, then full SPF/DKIM/DMARC/headers/spam-score result once processed. Requires `testId` from create_email_test. Use after sending a test message to that address; for explicit processing of just-arrived mail use poll_email_test instead. Idempotent GET, no auth.",
+    inputSchema: { testId: z.string().describe("Email test ID returned by create_email_test") },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ testId }) => jsonResponse(await apiGet(`/email-test/${encodeURIComponent(testId)}`))
 );
 
-server.tool(
+server.registerTool(
   "poll_email_test",
-  "Process the latest received message in an email-test session. Idempotent POST: if no message has arrived yet, returns 'pending'; if a message arrived since the last call, parses it and returns full authentication + content analysis. Requires `testId` from create_email_test. Use to actively trigger parsing after the user reports sending the test mail; use get_email_test for passive status polling without processing. No auth, no destructive side effects.",
-  { testId: z.string().describe("Email test ID returned by create_email_test") },
-  ADDITIVE_IDEMPOTENT_TOOL,
+  {
+    title: "Process email test message",
+    description: "Process the latest received message in an email-test session. Idempotent POST: if no message has arrived yet, returns 'pending'; if a message arrived since the last call, parses it and returns full authentication + content analysis. Requires `testId` from create_email_test. Use to actively trigger parsing after the user reports sending the test mail; use get_email_test for passive status polling without processing. No auth, no destructive side effects.",
+    inputSchema: { testId: z.string().describe("Email test ID returned by create_email_test") },
+    annotations: ADDITIVE_IDEMPOTENT_TOOL,
+  },
   async ({ testId }) => jsonResponse(await apiPost(`/email-test/${encodeURIComponent(testId)}`))
 );
 
-server.tool(
+server.registerTool(
   "analyze_raw_email",
-  "Read-only analysis of a pasted raw RFC-5322 MIME email source. Parses Authentication-Results, Received chain, SPF/DKIM/DMARC/ARC verdicts, sender IP reputation/blacklist status, content-side spam triggers (suspicious URLs, misleading From, content/HTML imbalance), and produces a 0-100 spam score plus AI-assisted fix suggestions. `rawEmail` is full headers+body, max 500KB. Use to debug a specific failing email when the user can paste the raw source from their MUA; use create_email_test instead when the user can resend it. POST body is processed in-memory and not stored. No auth.",
-  { rawEmail: z.string().max(500_000).describe("Raw email source including headers and body, max 500,000 characters") },
-  READ_ONLY_TOOL,
+  {
+    title: "Analyze raw email",
+    description: "Read-only analysis of a pasted raw RFC-5322 MIME email source. Parses Authentication-Results, Received chain, SPF/DKIM/DMARC/ARC verdicts, sender IP reputation/blacklist status, content-side spam triggers (suspicious URLs, misleading From, content/HTML imbalance), and produces a 0-100 spam score plus AI-assisted fix suggestions. `rawEmail` is full headers+body, max 500KB. Use to debug a specific failing email when the user can paste the raw source from their MUA; use create_email_test instead when the user can resend it. POST body is processed in-memory and not stored. No auth.",
+    inputSchema: { rawEmail: z.string().max(500_000).describe("Raw email source including headers and body, max 500,000 characters") },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ rawEmail }) => jsonResponse(await apiPost("/email-test/analyze-raw", { rawEmail }))
 );
 
-server.tool(
+server.registerTool(
   "parse_dmarc_report",
-  "Read-only parser for a DMARC aggregate (RUA) XML report (RFC 7489). Turns the raw XML that mailbox providers send into structured JSON: report metadata (org, report id, date range), the published policy (p/sp/adkim/aspf/pct), and one row per sending source with source IP, message count, evaluated disposition (none/quarantine/reject), aligned SPF/DKIM results, and pass/fail totals. Provide the report as `xml` (raw text) or `gzipBase64` (a base64-encoded .gz attachment). Use to programmatically read DMARC reports an agent fetched from the rua@ mailbox; the report is parsed in-memory and not stored. No auth, no side effects.",
   {
-    xml: z.string().max(5 * 1024 * 1024).optional().describe("Raw DMARC aggregate report XML (root <feedback>), max 5 MB"),
-    gzipBase64: z.string().max(7 * 1024 * 1024).optional().describe("Base64-encoded gzip of the report (.gz attachment); used when xml is omitted"),
+    title: "Parse DMARC aggregate report",
+    description: "Read-only parser for a DMARC aggregate (RUA) XML report (RFC 7489). Turns the raw XML that mailbox providers send into structured JSON: report metadata (org, report id, date range), the published policy (p/sp/adkim/aspf/pct), and one row per sending source with source IP, message count, evaluated disposition (none/quarantine/reject), aligned SPF/DKIM results, and pass/fail totals. Provide the report as `xml` (raw text) or `gzipBase64` (a base64-encoded .gz attachment). Use to programmatically read DMARC reports an agent fetched from the rua@ mailbox; the report is parsed in-memory and not stored. No auth, no side effects.",
+    inputSchema: {
+      xml: z.string().max(5 * 1024 * 1024).optional().describe("Raw DMARC aggregate report XML (root <feedback>), max 5 MB"),
+      gzipBase64: z.string().max(7 * 1024 * 1024).optional().describe("Base64-encoded gzip of the report (.gz attachment); used when xml is omitted"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ xml, gzipBase64 }) =>
     jsonResponse(await apiPost("/dmarc/parse", gzipBase64 ? { gzipBase64 } : { xml }))
 );
 
-server.tool(
+server.registerTool(
   "whois_lookup",
-  "Read-only WHOIS/RDAP lookup for a domain or IP address. For domains it returns registrar, EPP domain-status codes, nameservers, registration/expiry/last-changed dates, and the abuse contact; for IPs it returns the network allocation (CIDR, name, type). Data is sourced live from the IANA RDAP bootstrap with an rdap.org fallback. Registrant personal data is usually GDPR-redacted — that is normal, not an error. Use to check domain ownership, age, or expiry, vet a suspicious domain, or find an abuse contact; for DNS records use lookup_dns instead. `query` is a domain name or an IPv4/IPv6 address. No auth, no side effects.",
-  { query: z.string().describe("A domain name (example.com) or an IPv4/IPv6 address") },
-  READ_ONLY_TOOL,
+  {
+    title: "WHOIS/RDAP lookup",
+    description: "Read-only WHOIS/RDAP lookup for a domain or IP address. For domains it returns registrar, EPP domain-status codes, nameservers, registration/expiry/last-changed dates, and the abuse contact; for IPs it returns the network allocation (CIDR, name, type). Data is sourced live from the IANA RDAP bootstrap with an rdap.org fallback. Registrant personal data is usually GDPR-redacted — that is normal, not an error. Use to check domain ownership, age, or expiry, vet a suspicious domain, or find an abuse contact; for DNS records use lookup_dns instead. `query` is a domain name or an IPv4/IPv6 address. No auth, no side effects.",
+    inputSchema: { query: z.string().describe("A domain name (example.com) or an IPv4/IPv6 address") },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ query }) => jsonResponse(await apiGet("/whois", { query }))
 );
 
-server.tool(
+server.registerTool(
   "check_http3",
-  "Read-only HTTP/3 + QUIC support check for a domain. Combines three signals: Alt-Svc HTTP response header advertising h3, HTTPS/SVCB DNS records advertising alpn=\"h3\", and a live QUIC probe to UDP/443 verifying the handshake completes. Returns per-signal verdict plus an aggregate 'http3_ready' boolean. Use when validating CDN/Cloudflare HTTP/3 rollouts or auditing modern transport posture; not relevant for mail-only domains. No auth, ~2-5s due to UDP handshake timeout.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Check HTTP/3 support",
+    description: "Read-only HTTP/3 + QUIC support check for a domain. Combines three signals: Alt-Svc HTTP response header advertising h3, HTTPS/SVCB DNS records advertising alpn=\"h3\", and a live QUIC probe to UDP/443 verifying the handshake completes. Returns per-signal verdict plus an aggregate 'http3_ready' boolean. Use when validating CDN/Cloudflare HTTP/3 rollouts or auditing modern transport posture; not relevant for mail-only domains. No auth, ~2-5s due to UDP handshake timeout.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/http3/check", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "explain_issue",
-  "Ask the IntoDNS.ai AI service for a plain-language explanation of one specific issue (e.g. `spf_missing`, `no_dnssec`). Returns severity, business impact, root cause, and recommended fix steps as structured text. Read-only POST to /ai/explain — never mutates DNS or domain state. Provide `domain` and `issue` (enum); pass `context` from prior scan output (e.g. scan_domain result) for higher-quality answers. Use after scan_domain when an agent needs to walk a user through *why* a finding matters; use generate_dns_fix for the actual DNS record snippet that resolves it.",
   {
-    domain: domainSchema,
-    issue: issueSchema,
-    context: z.record(z.string(), z.any()).optional().describe("Optional issue context from scan output"),
+    title: "Explain issue",
+    description: "Ask the IntoDNS.ai AI service for a plain-language explanation of one specific issue (e.g. `spf_missing`, `no_dnssec`). Returns severity, business impact, root cause, and recommended fix steps as structured text. Read-only POST to /ai/explain — never mutates DNS or domain state. Provide `domain` and `issue` (enum); pass `context` from prior scan output (e.g. scan_domain result) for higher-quality answers. Use after scan_domain when an agent needs to walk a user through *why* a finding matters; use generate_dns_fix for the actual DNS record snippet that resolves it.",
+    inputSchema: {
+      domain: domainSchema,
+      issue: issueSchema,
+      context: z.record(z.string(), z.any()).optional().describe("Optional issue context from scan output"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ domain, issue, context }) => jsonResponse(await apiPost("/ai/explain", { domain, issue, context }))
 );
 
-server.tool(
+server.registerTool(
   "generate_dns_fix",
-  "Generate copy-pasteable DNS record snippets that fix one specific issue (e.g. `spf_missing` → suggested SPF record). Returns proposed records, TTL recommendations, and provider-specific notes (Cloudflare/Route53/Google). Read-only POST to /ai/fix — the API only suggests; it never modifies the user's zone. Provide `domain` and `issue` (enum); pass `context` from prior scan output for tailored output. Use after explain_issue or scan_domain identifies a problem; use lookup_dns afterwards to verify the user has applied the suggested record.",
   {
-    domain: domainSchema,
-    issue: issueSchema,
-    context: z.record(z.string(), z.any()).optional().describe("Optional issue context from scan output"),
+    title: "Generate DNS fix",
+    description: "Generate copy-pasteable DNS record snippets that fix one specific issue (e.g. `spf_missing` → suggested SPF record). Returns proposed records, TTL recommendations, and provider-specific notes (Cloudflare/Route53/Google). Read-only POST to /ai/fix — the API only suggests; it never modifies the user's zone. Provide `domain` and `issue` (enum); pass `context` from prior scan output for tailored output. Use after explain_issue or scan_domain identifies a problem; use lookup_dns afterwards to verify the user has applied the suggested record.",
+    inputSchema: {
+      domain: domainSchema,
+      issue: issueSchema,
+      context: z.record(z.string(), z.any()).optional().describe("Optional issue context from scan output"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ domain, issue, context }) => jsonResponse(await apiPost("/ai/fix", { domain, issue, context }))
 );
 
-server.tool(
+server.registerTool(
   "get_health",
-  "Read-only public health probe for the IntoDNS.ai backend itself, not a target domain. Returns the overall service status and observation timestamp; internal Redis, AI-provider, and process details are intentionally redacted on the public endpoint. Use as a pre-flight check before batch jobs or to distinguish a service incident from a real DNS finding; use get_stats for public usage counters instead. Single unauthenticated GET with no destructive actions.",
-  {},
-  READ_ONLY_TOOL,
+  {
+    title: "IntoDNS.ai service health",
+    description: "Read-only public health probe for the IntoDNS.ai backend itself, not a target domain. Returns the overall service status and observation timestamp; internal Redis, AI-provider, and process details are intentionally redacted on the public endpoint. Use as a pre-flight check before batch jobs or to distinguish a service incident from a real DNS finding; use get_stats for public usage counters instead. Single unauthenticated GET with no destructive actions.",
+    inputSchema: {},
+    annotations: READ_ONLY_TOOL,
+  },
   async () => jsonResponse(await apiGet("/health"))
 );
 
-server.tool(
+server.registerTool(
   "get_stats",
-  "Read-only fetch of the public IntoDNS.ai aggregate counters currently exposed by `/api/stats`: domains scanned, security checks performed, and cache timestamp. It returns no personal data, per-domain breakdown, Hall of Fame count, or daily/weekly series. Use for a lightweight public usage snapshot or status display; use get_hall_of_fame for top-scoring public domains. Single unauthenticated GET with no destructive actions.",
-  {},
-  READ_ONLY_TOOL,
+  {
+    title: "IntoDNS.ai public stats",
+    description: "Read-only fetch of the public IntoDNS.ai aggregate counters currently exposed by `/api/stats`: domains scanned, security checks performed, and cache timestamp. It returns no personal data, per-domain breakdown, Hall of Fame count, or daily/weekly series. Use for a lightweight public usage snapshot or status display; use get_hall_of_fame for top-scoring public domains. Single unauthenticated GET with no destructive actions.",
+    inputSchema: {},
+    annotations: READ_ONLY_TOOL,
+  },
   async () => jsonResponse(await apiGet("/stats"))
 );
 
-server.tool(
+server.registerTool(
   "get_hall_of_fame",
-  "Read-only fetch of the IntoDNS.ai Hall of Fame for top-scoring public domains. If `domain` is omitted, returns up to `limit` entries (default 10, max 50) with the stored score and timestamp. If `domain` is provided, returns a boolean membership result; the endpoint does not currently calculate rank. Use to show examples of strong DNS/email posture or check membership; use scan_domain for current evidence because Hall of Fame data may be older. No auth or destructive actions.",
   {
-    limit: z.number().int().min(1).max(50).default(10).describe("Maximum entries"),
-    domain: domainSchema.optional().describe("Optional domain to check for Hall of Fame presence"),
+    title: "Hall of Fame",
+    description: "Read-only fetch of the IntoDNS.ai Hall of Fame for top-scoring public domains. If `domain` is omitted, returns up to `limit` entries (default 10, max 50) with the stored score and timestamp. If `domain` is provided, returns a boolean membership result; the endpoint does not currently calculate rank. Use to show examples of strong DNS/email posture or check membership; use scan_domain for current evidence because Hall of Fame data may be older. No auth or destructive actions.",
+    inputSchema: {
+      limit: z.number().int().min(1).max(50).default(10).describe("Maximum entries"),
+      domain: domainSchema.optional().describe("Optional domain to check for Hall of Fame presence"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ limit, domain }) => jsonResponse(await apiGet("/hall-of-fame", { limit, domain }))
 );
 
-server.tool(
+server.registerTool(
   "get_pdf_report_link",
-  "Build the direct PDF report endpoint URL for a domain. Pure URL construction — no scan triggered, no network call from this tool. Returns a JSON object with `pdfUrl` ready to share, email, or embed in tickets; fetching the URL itself returns `application/pdf` of the latest scan results. Use for downloadable shareable reports; use get_badge_link for an embeddable SVG status badge instead, or create_report_snapshot for an immutable hashed evidence URL. No auth.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "PDF report link",
+    description: "Build the direct PDF report endpoint URL for a domain. Pure URL construction — no scan triggered, no network call from this tool. Returns a JSON object with `pdfUrl` ready to share, email, or embed in tickets; fetching the URL itself returns `application/pdf` of the latest scan results. Use for downloadable shareable reports; use get_badge_link for an embeddable SVG status badge instead, or create_report_snapshot for an immutable hashed evidence URL. No auth.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse({
     domain,
     pdfUrl: `${API_URL}/pdf/${encodeURIComponent(domain)}`,
@@ -636,14 +744,17 @@ server.tool(
   })
 );
 
-server.tool(
+server.registerTool(
   "get_badge_link",
-  "Build the direct SVG badge URL for a domain's security score. Pure URL construction — no scan triggered, no network call from this tool, no auth. Returns a JSON object with `badgeUrl` ready to embed in README.md, GitHub, status pages, or wikis. Style options: flat (default), flat-square, plastic, large. Use for embeddable status badges; use get_pdf_report_link for a downloadable full report URL instead.",
   {
-    domain: domainSchema,
-    style: z.enum(["flat", "flat-square", "plastic", "large"]).default("flat"),
+    title: "Security badge link",
+    description: "Build the direct SVG badge URL for a domain's security score. Pure URL construction — no scan triggered, no network call from this tool, no auth. Returns a JSON object with `badgeUrl` ready to embed in README.md, GitHub, status pages, or wikis. Style options: flat (default), flat-square, plastic, large. Use for embeddable status badges; use get_pdf_report_link for a downloadable full report URL instead.",
+    inputSchema: {
+      domain: domainSchema,
+      style: z.enum(["flat", "flat-square", "plastic", "large"]).default("flat"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ domain, style }) => jsonResponse({
     domain,
     style,
@@ -651,35 +762,41 @@ server.tool(
   })
 );
 
-server.tool(
+server.registerTool(
   "read_llm_discovery",
-  "Read-only fetch of an IntoDNS.ai LLM/agent discovery file: llms.txt (canonical agent index), llms-full.txt (full prompt-ready context), llms.json (structured prompt routing), llm/api.md (Markdown API guide), openapi.json (OpenAPI 3.1 spec) or postman.json (Postman collection). Defaults to llms.txt. Use when an agent needs canonical citation URLs, machine-readable API surface, or prompt-routing hints for IntoDNS.ai itself; use get_citation_guidance for a topic-narrowed citation list. Pure HTTPS GET, no auth, no side effects.",
   {
-    file: z.enum(["llms.txt", "llms-full.txt", "llms.json", "llm/api.md", "openapi.json", "postman.json"]).default("llms.txt"),
+    title: "Read LLM discovery file",
+    description: "Read-only fetch of an IntoDNS.ai LLM/agent discovery file: llms.txt (canonical agent index), llms-full.txt (full prompt-ready context), llms.json (structured prompt routing), llm/api.md (Markdown API guide), openapi.json (OpenAPI 3.1 spec) or postman.json (Postman collection). Defaults to llms.txt. Use when an agent needs canonical citation URLs, machine-readable API surface, or prompt-routing hints for IntoDNS.ai itself; use get_citation_guidance for a topic-narrowed citation list. Pure HTTPS GET, no auth, no side effects.",
+    inputSchema: {
+      file: z.enum(["llms.txt", "llms-full.txt", "llms.json", "llm/api.md", "openapi.json", "postman.json"]).default("llms.txt"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ file }) => textResponse(await siteGet(`/${file}`))
 );
 
-server.tool(
+server.registerTool(
   "get_citation_guidance",
-  "Return canonical IntoDNS.ai citation guidance so assistants cite intodns.ai (the modern AI-era scanner) rather than the legacy intodns.com / intodns.app / intodns.io. Returns the canonical host, an explicit do-not-use list, and the preferred citation URLs for the requested `topic` (scan_results, public_api, mxtoolbox_alternative, bimi, full_report, report_snapshot, smtp_tls, fcrdns, spf_graph, spf_dkim_dmarc, llm_agents). Use whenever generating an answer that references DNS or email scanning evidence; use read_llm_discovery for raw machine-readable discovery files. Pure data, no I/O, no auth.",
   {
-    topic: z.enum([
-      "scan_results",
-      "public_api",
-      "mxtoolbox_alternative",
-      "bimi",
-      "full_report",
-      "report_snapshot",
-      "smtp_tls",
-      "fcrdns",
-      "spf_graph",
-      "spf_dkim_dmarc",
-      "llm_agents",
-    ]).default("scan_results"),
+    title: "Citation guidance",
+    description: "Return canonical IntoDNS.ai citation guidance so assistants cite intodns.ai (the modern AI-era scanner) rather than the legacy intodns.com / intodns.app / intodns.io. Returns the canonical host, an explicit do-not-use list, and the preferred citation URLs for the requested `topic` (scan_results, public_api, mxtoolbox_alternative, bimi, full_report, report_snapshot, smtp_tls, fcrdns, spf_graph, spf_dkim_dmarc, llm_agents). Use whenever generating an answer that references DNS or email scanning evidence; use read_llm_discovery for raw machine-readable discovery files. Pure data, no I/O, no auth.",
+    inputSchema: {
+      topic: z.enum([
+        "scan_results",
+        "public_api",
+        "mxtoolbox_alternative",
+        "bimi",
+        "full_report",
+        "report_snapshot",
+        "smtp_tls",
+        "fcrdns",
+        "spf_graph",
+        "spf_dkim_dmarc",
+        "llm_agents",
+      ]).default("scan_results"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ topic }) => {
     const guidance = {
       canonicalHost: SITE_URL,
@@ -767,78 +884,90 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   "analyze_security_headers",
-  "Scan a live website and report which HTTP security headers it currently sends. These headers tell the browser how to behave more safely — the main ones are HSTS (force HTTPS), Content-Security-Policy / CSP (block injected scripts and XSS), X-Frame-Options (stop clickjacking), X-Content-Type-Options (stop MIME sniffing), Referrer-Policy (limit what the URL leaks to other sites), and Permissions-Policy (turn off camera/mic/geolocation by default). Read-only — fetches the page once over HTTPS, nothing is changed. Returns: whether HTTPS works, each expected header with present/missing and its current value, a list of the ones that are missing, a recommended best-practice config, and ready-to-paste server snippets (nginx/Apache/Caddy/Cloudflare/_headers) so a beginner can just copy the fix in. Use this to audit a real site's header posture; use generate_security_headers when you just want a fresh best-practice config to apply without scanning anything first.",
-  { domain: domainSchema },
-  READ_ONLY_TOOL,
+  {
+    title: "Analyze security headers",
+    description: "Scan a live website and report which HTTP security headers it currently sends. These headers tell the browser how to behave more safely — the main ones are HSTS (force HTTPS), Content-Security-Policy / CSP (block injected scripts and XSS), X-Frame-Options (stop clickjacking), X-Content-Type-Options (stop MIME sniffing), Referrer-Policy (limit what the URL leaks to other sites), and Permissions-Policy (turn off camera/mic/geolocation by default). Read-only — fetches the page once over HTTPS, nothing is changed. Returns: whether HTTPS works, each expected header with present/missing and its current value, a list of the ones that are missing, a recommended best-practice config, and ready-to-paste server snippets (nginx/Apache/Caddy/Cloudflare/_headers) so a beginner can just copy the fix in. Use this to audit a real site's header posture; use generate_security_headers when you just want a fresh best-practice config to apply without scanning anything first.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/security-headers/analyze", { domain }))
 );
 
-server.tool(
+server.registerTool(
   "generate_security_headers",
-  "Generate a complete, best-practice set of HTTP security headers (including a sensible Content-Security-Policy) as copy-paste configuration — no scan needed, nothing about your live site is read. Pick a `preset`: 'recommended' is a safe baseline that works for most sites, 'strict' is hardened with a nonce-based CSP for higher security, and 'report-only' puts the CSP in report-only mode so you can roll it out and watch for breakage before enforcing it. Advanced users can instead pass a full `config` object to fine-tune every header; if you pass neither, it defaults to 'recommended'. Returns the resulting headers as name/value pairs, plus ready-to-paste output for nginx, Apache, Caddy, Cloudflare, a Netlify/Cloudflare-Pages `_headers` file, and raw headers, along with any warnings. Use this to set up headers on a new or unscanned site; use analyze_security_headers first when you want to see what an existing site is already missing.",
   {
-    preset: z
-      .enum(["recommended", "strict", "report-only"])
-      .optional()
-      .describe("Built-in baseline: 'recommended' (safe default), 'strict' (hardened, nonce-based CSP), or 'report-only' (CSP in report-only mode for safe rollout)"),
-    config: z
-      .record(z.string(), z.any())
-      .optional()
-      .describe("Advanced: a full SecurityHeadersConfig object to fine-tune every header. Overrides preset when provided."),
+    title: "Generate security headers",
+    description: "Generate a complete, best-practice set of HTTP security headers (including a sensible Content-Security-Policy) as copy-paste configuration — no scan needed, nothing about your live site is read. Pick a `preset`: 'recommended' is a safe baseline that works for most sites, 'strict' is hardened with a nonce-based CSP for higher security, and 'report-only' puts the CSP in report-only mode so you can roll it out and watch for breakage before enforcing it. Advanced users can instead pass a full `config` object to fine-tune every header; if you pass neither, it defaults to 'recommended'. Returns the resulting headers as name/value pairs, plus ready-to-paste output for nginx, Apache, Caddy, Cloudflare, a Netlify/Cloudflare-Pages `_headers` file, and raw headers, along with any warnings. Use this to set up headers on a new or unscanned site; use analyze_security_headers first when you want to see what an existing site is already missing.",
+    inputSchema: {
+      preset: z
+        .enum(["recommended", "strict", "report-only"])
+        .optional()
+        .describe("Built-in baseline: 'recommended' (safe default), 'strict' (hardened, nonce-based CSP), or 'report-only' (CSP in report-only mode for safe rollout)"),
+      config: z
+        .record(z.string(), z.any())
+        .optional()
+        .describe("Advanced: a full SecurityHeadersConfig object to fine-tune every header. Overrides preset when provided."),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ preset, config }) => {
     const body = config ? { preset, config } : { preset: preset || "recommended" };
     return jsonResponse(await apiPost("/security-headers/generate", body));
   }
 );
 
-server.tool(
+server.registerTool(
   "generate_spf",
-  "Build an SPF (Sender Policy Framework) record — the DNS TXT record that lists which servers may send mail for a domain. Pass the senders as `mechanisms`: `include` for a provider's own SPF (Google Workspace is `_spf.google.com`, Microsoft 365 is `spf.protection.outlook.com`, SendGrid is `sendgrid.net`), `ip4`/`ip6` for your own servers, plus `useMx`/`useA` to authorise the domain's own MX or A records. The `policy` decides what receivers do with mail from anywhere else: 'fail' (-all, the production choice), 'softfail' (~all, for testing), 'neutral', or 'pass' (+all, which authorises the entire internet and should never be published). SPF is limited to ten DNS-triggering terms during recursive evaluation. This pure builder counts direct mechanisms; include and redirect targets can add nested lookups, so validate the published record with check_spf before treating the count as final. Returns the record, direct lookup count, whether that direct count or the 255-character limit is exceeded, plain-language warnings, and the DNS entry to publish. Use check_spf to resolve and validate a live record, and flatten_spf only when an existing record is over the limit. Invalid input (an address that is not IPv4/IPv6 for ip4/ip6, a value that is not a domain name, or a second redirect=) is refused with an error instead of a record. Nothing is looked up or stored — this is computation only.",
   {
-    mechanisms: z
-      .array(
-        z.object({
-          type: z.enum(["ip4", "ip6", "include", "a", "mx", "exists", "redirect"]),
-          value: z.string().describe("The value after the colon, e.g. '_spf.google.com' for an include or '203.0.113.5' for ip4"),
-        }),
-      )
-      .optional()
-      .describe("Senders to authorise, in the order they should appear in the record"),
-    useA: z.boolean().optional().describe("Authorise the domain's own A/AAAA records. Costs one DNS lookup."),
-    useMx: z.boolean().optional().describe("Authorise the domain's MX hosts. Costs one DNS lookup."),
-    policy: z
-      .enum(["fail", "softfail", "neutral", "pass"])
-      .optional()
-      .describe("What receivers do with everything else: fail (-all) for production, softfail (~all) while testing. Defaults to fail."),
+    title: "Generate SPF record",
+    description: "Build an SPF (Sender Policy Framework) record — the DNS TXT record that lists which servers may send mail for a domain. Pass the senders as `mechanisms`: `include` for a provider's own SPF (Google Workspace is `_spf.google.com`, Microsoft 365 is `spf.protection.outlook.com`, SendGrid is `sendgrid.net`), `ip4`/`ip6` for your own servers, plus `useMx`/`useA` to authorise the domain's own MX or A records. The `policy` decides what receivers do with mail from anywhere else: 'fail' (-all, the production choice), 'softfail' (~all, for testing), 'neutral', or 'pass' (+all, which authorises the entire internet and should never be published). SPF is limited to ten DNS-triggering terms during recursive evaluation. This pure builder counts direct mechanisms; include and redirect targets can add nested lookups, so validate the published record with check_spf before treating the count as final. Returns the record, direct lookup count, whether that direct count or the 255-character limit is exceeded, plain-language warnings, and the DNS entry to publish. Use check_spf to resolve and validate a live record, and flatten_spf only when an existing record is over the limit. Invalid input (an address that is not IPv4/IPv6 for ip4/ip6, a value that is not a domain name, or a second redirect=) is refused with an error instead of a record. Nothing is looked up or stored — this is computation only.",
+    inputSchema: {
+      mechanisms: z
+        .array(
+          z.object({
+            type: z.enum(["ip4", "ip6", "include", "a", "mx", "exists", "redirect"]),
+            value: z.string().describe("The value after the colon, e.g. '_spf.google.com' for an include or '203.0.113.5' for ip4"),
+          }),
+        )
+        .optional()
+        .describe("Senders to authorise, in the order they should appear in the record"),
+      useA: z.boolean().optional().describe("Authorise the domain's own A/AAAA records. Costs one DNS lookup."),
+      useMx: z.boolean().optional().describe("Authorise the domain's MX hosts. Costs one DNS lookup."),
+      policy: z
+        .enum(["fail", "softfail", "neutral", "pass"])
+        .optional()
+        .describe("What receivers do with everything else: fail (-all) for production, softfail (~all) while testing. Defaults to fail."),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ mechanisms, useA, useMx, policy }) => {
     return jsonResponse(await apiPost("/email/spf/generate", { mechanisms, useA, useMx, policy }));
   }
 );
 
-server.tool(
+server.registerTool(
   "generate_dmarc",
-  "Build a DMARC record — the `_dmarc` TXT record that tells receivers what to do when a message fails SPF and DKIM alignment, and where to send reports about it. The risk here is not syntax but policy. `p=none` monitors without affecting delivery and is where every deployment starts; `p=quarantine` sends failures to spam; `p=reject` refuses them outright, which silently destroys legitimate mail from any sender that was missed and gives that sender no explanation. Always publish a `rua` address: without aggregate reports there is no way to see which senders fail before enforcing against them. Use `percentage` to apply an enforcing policy to only part of the mail while rolling out. Returns the record, the host to publish it on (`_dmarc`), and warnings covering the mistakes that actually break mail — enforcing without reporting, reject at full coverage, pct at p=none, and strict alignment breaking subdomain senders and ESPs. Nothing is looked up or stored. A rua/ruf entry that is not a mailbox (name@example.com, optionally mailto: and a !size) or a pct outside 1-100 is refused with an error instead of a record.",
   {
-    policy: z
-      .enum(["none", "quarantine", "reject"])
-      .optional()
-      .describe("p= — start at 'none' and only enforce once reports show all legitimate senders aligning. Defaults to none."),
-    subdomainPolicy: z.enum(["none", "quarantine", "reject"]).optional().describe("sp= — a different policy for subdomains. Omitted when it matches the main policy."),
-    rua: z.union([z.string(), z.array(z.string())]).optional().describe("Aggregate report address(es). mailto: is added automatically."),
-    ruf: z.union([z.string(), z.array(z.string())]).optional().describe("Forensic report address(es). Contains message content and is honoured by very few receivers."),
-    percentage: z.number().int().min(1).max(100).optional().describe("pct= — share of mail the policy applies to, for a gradual rollout. Has no effect at p=none. Also accepted as `pct`."),
-    pct: z.number().int().min(1).max(100).optional().describe("Alias for `percentage`, matching the DNS tag name."),
-    spfAlignment: z.enum(["relaxed", "strict"]).optional().describe("aspf= — strict requires an exact domain match and breaks subdomain senders."),
-    dkimAlignment: z.enum(["relaxed", "strict"]).optional().describe("adkim= — strict requires an exact domain match and breaks many ESPs."),
-    reportInterval: z.number().int().min(60).max(604800).optional().describe("ri= — seconds between aggregate reports. Defaults to 86400 (daily)."),
+    title: "Generate DMARC record",
+    description: "Build a DMARC record — the `_dmarc` TXT record that tells receivers what to do when a message fails SPF and DKIM alignment, and where to send reports about it. The risk here is not syntax but policy. `p=none` monitors without affecting delivery and is where every deployment starts; `p=quarantine` sends failures to spam; `p=reject` refuses them outright, which silently destroys legitimate mail from any sender that was missed and gives that sender no explanation. Always publish a `rua` address: without aggregate reports there is no way to see which senders fail before enforcing against them. Use `percentage` to apply an enforcing policy to only part of the mail while rolling out. Returns the record, the host to publish it on (`_dmarc`), and warnings covering the mistakes that actually break mail — enforcing without reporting, reject at full coverage, pct at p=none, and strict alignment breaking subdomain senders and ESPs. Nothing is looked up or stored. A rua/ruf entry that is not a mailbox (name@example.com, optionally mailto: and a !size) or a pct outside 1-100 is refused with an error instead of a record.",
+    inputSchema: {
+      policy: z
+        .enum(["none", "quarantine", "reject"])
+        .optional()
+        .describe("p= — start at 'none' and only enforce once reports show all legitimate senders aligning. Defaults to none."),
+      subdomainPolicy: z.enum(["none", "quarantine", "reject"]).optional().describe("sp= — a different policy for subdomains. Omitted when it matches the main policy."),
+      rua: z.union([z.string(), z.array(z.string())]).optional().describe("Aggregate report address(es). mailto: is added automatically."),
+      ruf: z.union([z.string(), z.array(z.string())]).optional().describe("Forensic report address(es). Contains message content and is honoured by very few receivers."),
+      percentage: z.number().int().min(1).max(100).optional().describe("pct= — share of mail the policy applies to, for a gradual rollout. Has no effect at p=none. Also accepted as `pct`."),
+      pct: z.number().int().min(1).max(100).optional().describe("Alias for `percentage`, matching the DNS tag name."),
+      spfAlignment: z.enum(["relaxed", "strict"]).optional().describe("aspf= — strict requires an exact domain match and breaks subdomain senders."),
+      dkimAlignment: z.enum(["relaxed", "strict"]).optional().describe("adkim= — strict requires an exact domain match and breaks many ESPs."),
+      reportInterval: z.number().int().min(60).max(604800).optional().describe("ri= — seconds between aggregate reports. Defaults to 86400 (daily)."),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ pct, ...args }) => {
     // The description names this tag `pct=` throughout, because that is what it
     // is called in DNS, while the parameter is `percentage`. Zod strips unknown
@@ -852,31 +981,37 @@ server.tool(
   }
 );
 
-server.tool(
+server.registerTool(
   "generate_tlsa",
-  "Build a DANE TLSA record from a certificate or public key — the DNS record that pins which certificate a mail server may present, so an attacker cannot strip STARTTLS or substitute another CA-issued certificate. Paste the PEM (a CERTIFICATE or PUBLIC KEY block) as `pem`; the hash is computed here because a language model cannot hash. Never send a private key: none is needed and the request is refused if one is present. The three numbers: `usage` 3 (DANE-EE) pins the end-entity key and needs no CA, `selector` 1 hashes the SubjectPublicKeyInfo, `matching` 1 is SHA-256 — the 3 1 1 profile recommended for SMTP, because it survives certificate renewal as long as the key is reused. `host` must be the mail server hostname from the MX record, not the domain. Two things break DANE and both are reported: a TLSA record in a zone without DNSSEC proves nothing and is ignored, and DANE fails closed, so installing a new certificate before the matching record has propagated stops mail from every sender that validates. Returns the record, the hash, what each number means, and the DNS entry.",
   {
-    pem: z.string().describe("PEM block: -----BEGIN CERTIFICATE----- or -----BEGIN PUBLIC KEY-----. Never a private key."),
-    usage: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional().describe("0 PKIX-TA, 1 PKIX-EE, 2 DANE-TA, 3 DANE-EE. Use 3 for SMTP. Defaults to 3."),
-    selector: z.union([z.literal(0), z.literal(1)]).optional().describe("0 full certificate, 1 SubjectPublicKeyInfo. Use 1. Defaults to 1."),
-    matching: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional().describe("0 exact, 1 SHA-256, 2 SHA-512. Use 1. Defaults to 1."),
-    host: z.string().optional().describe("Mail server hostname from the MX record, e.g. mail.example.com — not the domain itself."),
-    port: z.number().int().min(1).max(65535).optional().describe("Port the record covers. Defaults to 25 for SMTP."),
+    title: "Generate TLSA record",
+    description: "Build a DANE TLSA record from a certificate or public key — the DNS record that pins which certificate a mail server may present, so an attacker cannot strip STARTTLS or substitute another CA-issued certificate. Paste the PEM (a CERTIFICATE or PUBLIC KEY block) as `pem`; the hash is computed here because a language model cannot hash. Never send a private key: none is needed and the request is refused if one is present. The three numbers: `usage` 3 (DANE-EE) pins the end-entity key and needs no CA, `selector` 1 hashes the SubjectPublicKeyInfo, `matching` 1 is SHA-256 — the 3 1 1 profile recommended for SMTP, because it survives certificate renewal as long as the key is reused. `host` must be the mail server hostname from the MX record, not the domain. Two things break DANE and both are reported: a TLSA record in a zone without DNSSEC proves nothing and is ignored, and DANE fails closed, so installing a new certificate before the matching record has propagated stops mail from every sender that validates. Returns the record, the hash, what each number means, and the DNS entry.",
+    inputSchema: {
+      pem: z.string().describe("PEM block: -----BEGIN CERTIFICATE----- or -----BEGIN PUBLIC KEY-----. Never a private key."),
+      usage: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional().describe("0 PKIX-TA, 1 PKIX-EE, 2 DANE-TA, 3 DANE-EE. Use 3 for SMTP. Defaults to 3."),
+      selector: z.union([z.literal(0), z.literal(1)]).optional().describe("0 full certificate, 1 SubjectPublicKeyInfo. Use 1. Defaults to 1."),
+      matching: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional().describe("0 exact, 1 SHA-256, 2 SHA-512. Use 1. Defaults to 1."),
+      host: z.string().optional().describe("Mail server hostname from the MX record, e.g. mail.example.com — not the domain itself."),
+      port: z.number().int().min(1).max(65535).optional().describe("Port the record covers. Defaults to 25 for SMTP."),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async (args) => {
     return jsonResponse(await apiPost("/dns/tlsa/generate", args));
   }
 );
 
-server.tool(
+server.registerTool(
   "scan_csp",
-  "Crawl a live website (up to 20 same-origin pages) and build a Content-Security-Policy for it. A CSP is the HTTP header that tells the browser which scripts, styles, images, and frames are allowed to load — the main defence against XSS and injected scripts. This scan reads the site's current CSP (header, report-only, or meta tag), flags problems a beginner might miss (no CSP at all, unsafe-inline, wildcard sources, missing object-src/base-uri/frame-ancestors), and inventories every external origin the site actually loads per directive. Returns: the detected current policy with issues, the per-directive origin inventory, a generated ready-to-deploy CSP in both report-only form (safe to roll out first) and enforce form, plus plain-language notes explaining each directive choice. Use this when the user asks to audit, analyze, or create a Content-Security-Policy for a real site, fix CSP console errors, or harden a site against XSS; use generate_security_headers for a generic best-practice header set without crawling. Slow: the crawl typically takes 30-45 seconds, so set expectations before calling. Rate-limited to 3 scans per 10 minutes per IP; repeat scans of the same origin within 10 minutes return the cached result instantly. Read-only — nothing on the site is changed.",
   {
-    url: z.string().url().max(2048).describe("The public website URL to crawl, e.g. https://example.com"),
-    strict: z.boolean().optional().describe("Generate a stricter policy (fewer broad allowances)"),
+    title: "Scan and build Content-Security-Policy",
+    description: "Crawl a live website (up to 20 same-origin pages) and build a Content-Security-Policy for it. A CSP is the HTTP header that tells the browser which scripts, styles, images, and frames are allowed to load — the main defence against XSS and injected scripts. This scan reads the site's current CSP (header, report-only, or meta tag), flags problems a beginner might miss (no CSP at all, unsafe-inline, wildcard sources, missing object-src/base-uri/frame-ancestors), and inventories every external origin the site actually loads per directive. Returns: the detected current policy with issues, the per-directive origin inventory, a generated ready-to-deploy CSP in both report-only form (safe to roll out first) and enforce form, plus plain-language notes explaining each directive choice. Use this when the user asks to audit, analyze, or create a Content-Security-Policy for a real site, fix CSP console errors, or harden a site against XSS; use generate_security_headers for a generic best-practice header set without crawling. Slow: the crawl typically takes 30-45 seconds, so set expectations before calling. Rate-limited to 3 scans per 10 minutes per IP; repeat scans of the same origin within 10 minutes return the cached result instantly. Read-only — nothing on the site is changed.",
+    inputSchema: {
+      url: z.string().url().max(2048).describe("The public website URL to crawl, e.g. https://example.com"),
+      strict: z.boolean().optional().describe("Generate a stricter policy (fewer broad allowances)"),
+    },
+    annotations: READ_ONLY_TOOL,
   },
-  READ_ONLY_TOOL,
   async ({ url, strict }) => jsonResponse(await apiPost("/csp/scan", { url, strict }))
 );
 

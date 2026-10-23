@@ -11,7 +11,11 @@ export function assertCatalog(tools) {
   assert.equal(tools.length, EXPECTED_TOOL_COUNT);
   assert.equal(new Set(tools.map((tool) => tool.name)).size, tools.length, "duplicate tool names");
   assert.equal(tools.filter((tool) => tool.annotations).length, EXPECTED_TOOL_COUNT);
+  // A directory review rejects a tool without a human-readable title, and all
+  // 45 shipped without one through v1.10.3 because nothing asked for it.
+  assert.equal(new Set(tools.map((tool) => tool.title)).size, tools.length, "duplicate tool titles");
   for (const tool of tools) {
+    assert.ok(tool.title?.trim(), `${tool.name} has no title`);
     assert.equal(tool.inputSchema?.type, "object", `${tool.name} has no object inputSchema`);
     assert.equal(typeof tool.annotations.readOnlyHint, "boolean", `${tool.name} has no readOnlyHint`);
   }

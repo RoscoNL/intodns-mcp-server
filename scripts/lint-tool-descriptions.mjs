@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(__dirname, "..", "src", "server.ts"), "utf8");
 
-const TOOL_RE = /server\.tool\(\s*"([a-z_0-9]+)"\s*,\s*("(?:[^"\\]|\\.)*")/g;
+const TOOL_RE = /server\.registerTool\(\s*"([a-z_0-9]+)"\s*,\s*\{\s*title:\s*"(?:[^"\\]|\\.)*"\s*,\s*description:\s*("(?:[^"\\]|\\.)*")/g;
 
 const MIN_CHARS = 200;
 const REQUIRED_MARKERS = ["use ", "use this", "use to", "use after", "use before", "use when", "use for", "instead", "after "];

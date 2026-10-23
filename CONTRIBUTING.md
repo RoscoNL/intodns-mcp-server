@@ -11,7 +11,7 @@ back on the next release push.
 
 ## Tool description template
 
-Every `server.tool()` description in `src/server.ts` MUST cover the six Glama TDQS dimensions or it will lower the listing's score (and worse, leave agents guessing about when to call the tool).
+Every tool is registered with `server.registerTool()` and carries a short human-readable `title` (directory reviews reject a tool without one). Every description in `src/server.ts` MUST cover the six Glama TDQS dimensions or it will lower the listing's score (and worse, leave agents guessing about when to call the tool).
 
 ### Required structure
 
@@ -33,10 +33,14 @@ Use when [trigger]; use [alternative tool] instead when [diff]. [Auth / no-auth]
 ### Good example
 
 ```ts
-server.tool(
+server.registerTool(
   "check_dmarc",
-  "Read-only fetch and parse of the _dmarc TXT record. Returns parsed tag map (p, sp, rua, ruf, adkim, aspf, pct, fo), policy strength assessment, alignment mode, and warnings (missing rua, p=none, weak alignment, multiple records). Use for DMARC policy review; use check_sender_requirements for combined Google/Yahoo SPF+DKIM+DMARC pass/fail verdict. Single GET, no auth, no side effects.",
-  { domain: domainSchema },
+  {
+    title: "Check DMARC record",
+    description: "Read-only fetch and parse of the _dmarc TXT record. Returns parsed tag map (p, sp, rua, ruf, adkim, aspf, pct, fo), policy strength assessment, alignment mode, and warnings (missing rua, p=none, weak alignment, multiple records). Use for DMARC policy review; use check_sender_requirements for combined Google/Yahoo SPF+DKIM+DMARC pass/fail verdict. Single GET, no auth, no side effects.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   async ({ domain }) => jsonResponse(await apiGet("/email/dmarc", { domain }))
 );
 ```
@@ -45,10 +49,14 @@ server.tool(
 
 ```ts
 // Misses: side effects, parameter intent, when to use, alternatives, output shape
-server.tool(
+server.registerTool(
   "check_dmarc",
-  "Parse and validate DMARC policy for a domain.",
-  { domain: domainSchema },
+  {
+    title: "Check DMARC record",
+    description: "Parse and validate DMARC policy for a domain.",
+    inputSchema: { domain: domainSchema },
+    annotations: READ_ONLY_TOOL,
+  },
   ...
 );
 ```
