@@ -18,6 +18,15 @@ const domainSchema = zod_1.z
     .max(253)
     .refine((domain) => /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain), "Provide a valid DNS domain name such as example.com")
     .describe("Domain name only, e.g. example.com (no URL, path, or port)");
+// Tools that query records at the name itself also take underscore labels:
+// _spf.google.com, _dmarc.example.com, _acme-challenge.example.com.
+const dnsNameSchema = zod_1.z
+    .string()
+    .trim()
+    .toLowerCase()
+    .max(253)
+    .refine((name) => /^(?:[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/.test(name), "Provide a valid DNS name such as example.com or _dmarc.example.com")
+    .describe("DNS name, e.g. example.com, _spf.google.com or _dmarc.example.com (no URL, path, or port)");
 const dkimSelectorSchema = zod_1.z
     .string()
     .trim()
@@ -323,7 +332,7 @@ function registerTools(server) {
         title: "DNS record lookup",
         description: "Read-only DNS record lookup via DNS-over-HTTPS. Pass `type` for a single record type or `types` for an array; if both omitted, returns A records. Returns parsed answers with TTL, raw rdata, and DNSSEC AD bit. Use for arbitrary record queries; use validate_dnssec for full DNSSEC chain validation, or check_dns_propagation for multi-resolver consensus. No auth, no rate limits beyond upstream resolver.",
         inputSchema: {
-            domain: domainSchema,
+            domain: dnsNameSchema,
             type: dnsTypeSchema.optional().describe("Single DNS record type"),
             types: zod_1.z.array(dnsTypeSchema).optional().describe("Multiple DNS record types"),
         },
@@ -342,7 +351,7 @@ function registerTools(server) {
         title: "Check DNS propagation",
         description: "Compare DNS responses across the nine currently configured public and authoritative resolvers to detect propagation lag, missing answers, or differing record sets. Each resolver's answer is compared as a whole RRset (order, case of names and trailing dots ignored; TXT case kept; TTLs ignored, as caches count them down). Defaults to record type A and region 'all'. Returns every resolver response, how many resolvers were queried, answered and failed, and `percentage` = share of the answering resolvers that agree on the most common answer; that is agreement, not coverage, and a failed resolver was not measured. Use when records were just changed and you suspect staleness; for a single DNS-over-HTTPS lookup use lookup_dns instead. Read-only HTTP, no auth, and no destructive actions.",
         inputSchema: {
-            domain: domainSchema,
+            domain: dnsNameSchema,
             type: propagationTypeSchema.default("A").describe("DNS record type to check"),
             region: zod_1.z.enum(["all", "global", "europe", "americas"]).default("all").describe("Resolver region"),
         },
@@ -361,13 +370,13 @@ function registerTools(server) {
     server.registerTool("check_spf", {
         title: "Check SPF record",
         description: "Read-only SPF parse and validation for a domain. Recursively walks include/redirect mechanisms to build the full lookup graph, counts DNS lookups against the RFC-7208 10-lookup limit, and returns flattening guidance when the count is close to or over the limit. Returns parsed mechanisms, lookup graph, total count, qualifier (~all / -all / +all), and warnings. Use for SPF auditing or before adding new include: senders; use check_email_security for the broader SPF+DKIM+DMARC overview. No auth, no side effects.",
-        inputSchema: { domain: domainSchema },
+        inputSchema: { domain: dnsNameSchema },
         annotations: READ_ONLY_TOOL,
     }, async ({ domain }) => jsonResponse(await apiGet("/email/spf", { domain })));
     server.registerTool("flatten_spf", {
         title: "Flatten SPF record",
         description: "Read-only SPF flattening for a domain. Resolves the full include/a/mx/redirect graph to literal ip4/ip6 addresses and returns a single flattened SPF record that fits under the RFC-7208 10-lookup limit, plus lookup counts before/after, IP count, record length, whether it must be split across multiple records, and a maintenance warning. Use when a domain hits 'too many DNS lookups' (PermError) and removing unused includes is not enough; run check_spf first to see the lookup graph and whether flattening is actually needed. Flattened records are high-maintenance — they break when a provider rotates IPs — so treat the output as a last resort to re-verify periodically. No auth, no side effects.",
-        inputSchema: { domain: domainSchema },
+        inputSchema: { domain: dnsNameSchema },
         annotations: READ_ONLY_TOOL,
     }, async ({ domain }) => jsonResponse(await apiGet("/spf/flatten", { domain })));
     server.registerTool("discover_dkim", {
