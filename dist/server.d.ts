@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-export declare const VERSION = "1.11.2";
+export declare const VERSION = "1.11.3";
 /**
  * Register all IntoDNS tools on an existing McpServer instance.
  * Used by the stdio entry, the standalone --http mode, and remote hosts

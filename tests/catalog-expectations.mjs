@@ -18,6 +18,11 @@ export function assertCatalog(tools) {
     assert.ok(tool.title?.trim(), `${tool.name} has no title`);
     assert.equal(tool.inputSchema?.type, "object", `${tool.name} has no object inputSchema`);
     assert.equal(typeof tool.annotations.readOnlyHint, "boolean", `${tool.name} has no readOnlyHint`);
+    // Manifest checkers count parameters without a description; through v1.11.2
+    // five enums (issue, style, file, topic) had none.
+    for (const [param, schema] of Object.entries(tool.inputSchema.properties ?? {})) {
+      assert.ok(schema.description?.trim(), `${tool.name}.${param} has no description`);
+    }
   }
 
   const discoverDkim = tools.find((tool) => tool.name === "discover_dkim");

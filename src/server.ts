@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-export const VERSION = "1.11.2";
+export const VERSION = "1.11.3";
 const SITE_URL = (process.env.INTODNS_SITE_URL || "https://intodns.ai").replace(/\/$/, "");
 const API_URL = `${SITE_URL}/api`;
 const USER_AGENT = `intodns-mcp/${VERSION}`;
@@ -95,7 +95,7 @@ const issueSchema = z.enum([
   "dmarc_quarantine",
   "no_caa",
   "dane_missing",
-]);
+]).describe("Issue identifier, e.g. spf_missing or no_dnssec");
 
 type JsonValue = unknown;
 
@@ -763,7 +763,7 @@ server.registerTool(
     description: "Build the direct SVG badge URL for a domain's security score. Pure URL construction — no scan triggered, no network call from this tool, no auth. Returns a JSON object with `badgeUrl` ready to embed in README.md, GitHub, status pages, or wikis. Style options: flat (default), flat-square, plastic, large. Use for embeddable status badges; use get_pdf_report_link for a downloadable full report URL instead.",
     inputSchema: {
       domain: domainSchema,
-      style: z.enum(["flat", "flat-square", "plastic", "large"]).default("flat"),
+      style: z.enum(["flat", "flat-square", "plastic", "large"]).default("flat").describe("Badge style; defaults to flat"),
     },
     annotations: READ_ONLY_TOOL,
   },
@@ -780,7 +780,7 @@ server.registerTool(
     title: "Read LLM discovery file",
     description: "Read-only fetch of an IntoDNS.ai LLM/agent discovery file: llms.txt (canonical agent index), llms-full.txt (full prompt-ready context), llms.json (structured prompt routing), llm/api.md (Markdown API guide), openapi.json (OpenAPI 3.1 spec) or postman.json (Postman collection). Defaults to llms.txt. Use when an agent needs canonical citation URLs, machine-readable API surface, or prompt-routing hints for IntoDNS.ai itself; use get_citation_guidance for a topic-narrowed citation list. Pure HTTPS GET, no auth, no side effects.",
     inputSchema: {
-      file: z.enum(["llms.txt", "llms-full.txt", "llms.json", "llm/api.md", "openapi.json", "postman.json"]).default("llms.txt"),
+      file: z.enum(["llms.txt", "llms-full.txt", "llms.json", "llm/api.md", "openapi.json", "postman.json"]).default("llms.txt").describe("Discovery file to fetch; defaults to llms.txt"),
     },
     annotations: READ_ONLY_TOOL,
   },
@@ -805,7 +805,7 @@ server.registerTool(
         "spf_graph",
         "spf_dkim_dmarc",
         "llm_agents",
-      ]).default("scan_results"),
+      ]).default("scan_results").describe("Topic to return citation URLs for; defaults to scan_results"),
     },
     annotations: READ_ONLY_TOOL,
   },
